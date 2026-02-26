@@ -63,6 +63,10 @@ game/
 
 ## Dramatic updates
 
+
+- Hidden ending removed: now all runs close with a clear spiritual archetype ending.
+- Added **Omega Final Boss** on level 8 for a harder climax.
+- Added 10+ new chaotic/varied shooting modes (fan, cross, chaos, spiral, sniper, rapid, etc.).
 - Symbolic doors now include iconography and dramatic narrative lines (`⚔`, `☾`, `🜏`, `✦`).
 - Floating damage numbers appear for enemy and player damage.
 - Enemy roster now includes size/behavior variants (`chaser`, `rusher`, `tank`).
