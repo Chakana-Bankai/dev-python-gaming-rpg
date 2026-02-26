@@ -2,7 +2,6 @@ import pygame
 
 from game.config import BLUE, GREEN, ORANGE, RED, WHITE
 
-ORANGE = (237, 153, 74)
 
 
 class HUD:
