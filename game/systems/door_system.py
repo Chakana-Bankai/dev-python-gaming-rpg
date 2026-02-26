@@ -1,9 +1,17 @@
 import random
 from dataclasses import dataclass
+from enum import Enum
 
 import pygame
 
-from game.settings import CYAN, DoorType, GREEN, HEIGHT, PURPLE, RED, WIDTH
+from game.config import CYAN, GREEN, HEIGHT, PURPLE, RED, WIDTH
+
+
+class DoorType(Enum):
+    CONFLICT = "Conflict"
+    CONTEMPLATION = "Contemplation"
+    SHADOW = "Shadow"
+    ASCENT = "Ascent"
 
 
 @dataclass
@@ -22,37 +30,30 @@ class Door:
 
 
 class DoorSystem:
-    def create_three_doors(self) -> list[Door]:
-        choices = list(DoorType)
-        random.shuffle(choices)
-        selected = choices[:3]
-        w, h = 90, 24
+    def create_doors(self):
+        pool = list(DoorType)
+        random.shuffle(pool)
+        w, h = 94, 24
         rects = [
             pygame.Rect(WIDTH // 2 - w // 2, 0, w, h),
             pygame.Rect(0, HEIGHT // 2 - w // 2, h, w),
             pygame.Rect(WIDTH - h, HEIGHT // 2 - w // 2, h, w),
         ]
-        return [Door(rects[i], selected[i]) for i in range(3)]
+        return [Door(rects[i], pool[i]) for i in range(3)]
 
-    def apply_effect(self, door_type, player, difficulty: int):
-        msg = ""
+    def apply(self, door_type: DoorType, gm):
         if door_type == DoorType.CONFLICT:
-            difficulty += 2
-            player.base_damage += 3
-            msg = "Conflict: pain becomes power."
-        elif door_type == DoorType.CONTEMPLATION:
-            player.heal(28)
-            player.fire_cd = max(0.08, player.fire_cd - 0.015)
-            msg = "Contemplation: breath restores rhythm."
-        elif door_type == DoorType.SHADOW:
-            difficulty += 1
-            player.base_damage += 5
-            player.max_hp = max(70, player.max_hp - 6)
-            player.hp = min(player.hp, player.max_hp)
-            msg = "Shadow: strength demands sacrifice."
-        elif door_type == DoorType.ASCENT:
-            player.max_hp += 14
-            player.heal(14)
-            difficulty = max(1, difficulty - 1)
-            msg = "Ascent: burden turns into clarity."
-        return difficulty, msg
+            gm.difficulty += 2
+            gm.player.damage += 2
+            return "Conflict embraced."
+        if door_type == DoorType.CONTEMPLATION:
+            gm.player.hp = min(gm.player.max_hp, gm.player.hp + 25)
+            return "Breath returns balance."
+        if door_type == DoorType.SHADOW:
+            gm.difficulty += 1
+            gm.spawn_reflection_next = True
+            return "Shadow remembers you."
+        gm.difficulty = max(1, gm.difficulty - 1)
+        gm.player.max_hp += 8
+        gm.player.hp = min(gm.player.max_hp, gm.player.hp + 8)
+        return "Ascent brings clarity."

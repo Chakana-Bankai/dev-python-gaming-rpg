@@ -1,57 +1,53 @@
-# Symbolic Roguelike (Pygame, Clean Architecture)
+# Symbolic Roguelike (Pygame)
 
-Proyecto roguelike top-down modular en **múltiples archivos** con arquitectura limpia para Pygame.
+Roguelike top-down minimalista con memoria persistente entre runs, perfil psicológico y puertas simbólicas.
 
-## Estructura
-
-```text
-game/
-├── main.py
-├── settings.py
-├── game_manager.py
-├── entities/
-│   ├── player.py
-│   ├── enemy.py
-│   ├── boss.py
-│   ├── super_boss.py
-│   └── bullet.py
-├── systems/
-│   ├── level_system.py
-│   ├── door_system.py
-│   ├── upgrade_system.py
-│   ├── item_system.py
-│   ├── combat_system.py
-│   └── narrative_system.py
-├── ui/
-│   ├── hud.py
-│   ├── level_up_screen.py
-│   └── end_screen.py
-└── utils/
-    ├── timers.py
-    └── helpers.py
-```
-
-## Instalación
+## How to run
 
 ```bash
 python -m venv .venv
 source .venv/bin/activate   # Windows: .venv\Scripts\Activate.ps1
-python -m pip install --upgrade pip
 python -m pip install -r requirements.txt
-```
-
-## Ejecución
-
-```bash
 python -m game.main
 ```
 
-## Controles
+## Design architecture
 
-- WASD: mover
-- Click izquierdo: disparar
-- Shift: dash
-- Enter: iniciar
-- 1/2/3: elegir mejora al subir nivel
-- R: reiniciar en final/game over
-- ESC: salir
+```text
+game/
+├── main.py
+├── config.py
+├── core/
+│   ├── game_manager.py
+│   ├── state_machine.py
+│   └── tension_system.py
+├── systems/
+│   ├── world_memory.py
+│   ├── psychological_profile.py
+│   ├── door_system.py
+│   └── mirror_mode.py
+├── entities/
+│   ├── player.py
+│   ├── enemy.py
+│   ├── reflection.py
+│   └── boss.py
+├── ui/
+│   ├── hud.py
+│   └── menus.py
+└── data/
+    └── world_memory.json
+```
+
+### Responsibility split
+
+- `main.py`: bootstrap de Pygame y loop delegado a `GameManager`.
+- `config.py`: constantes globales (FPS, resolución, paleta, paths).
+- `GameManager`: flujo de niveles, transiciones de estado, orquestación de sistemas.
+- `StateMachine`: controla estados `MENU`, `RUNNING`, `BOSS`, `FINAL`, `GAME_OVER`.
+- `TensionSystem`: calcula `tension_level` según conducta del jugador.
+- `WorldMemory`: persistencia invisible de runs y buffer de acciones.
+- `PsychologicalProfile`: puntajes de agresión/control/evasión y evaluación final.
+- `DoorSystem`: puertas simbólicas y efectos en dificultad/progresión.
+- `MirrorMode`: adapta Reflection con historial de acciones.
+- `entities/`: dominio jugable (player/enemy/reflection/boss).
+- `ui/`: HUD y menús desacoplados de la lógica de simulación.
