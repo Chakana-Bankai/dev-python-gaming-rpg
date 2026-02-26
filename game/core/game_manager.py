@@ -49,7 +49,25 @@ class GameManager:
         self.spawn_reflection_next = False
         self.damage_taken = 0.0
 
+        # cartas de mejora
+        self.card_options: list[tuple[str, callable]] = []
+
         self._spawn_level()
+
+    def _roll_cards(self):
+        p = self.player
+        pool = [
+            ("+25 HP max", lambda: setattr(p, "max_hp", p.max_hp + 25)),
+            ("+4 Damage", lambda: setattr(p, "damage", p.damage + 4)),
+            ("Triple Shot", lambda: setattr(p, "triple_shot", True)),
+            ("Piercing +1", lambda: setattr(p, "pierce", min(3, p.pierce + 1))),
+            ("Bounce +1", lambda: setattr(p, "bounce", min(3, p.bounce + 1))),
+            ("Critical +10%", lambda: setattr(p, "crit_bonus", min(0.4, p.crit_bonus + 0.10))),
+            ("Lifesteal +5%", lambda: setattr(p, "lifesteal", min(0.25, p.lifesteal + 0.05))),
+            ("Dash CD -15%", lambda: setattr(p, "dash_cd", max(0.4, p.dash_cd * 0.85))),
+        ]
+        random.shuffle(pool)
+        self.card_options = pool[:3]
 
     def _spawn_level(self):
         for g in (self.enemies, self.player_bullets):
@@ -70,7 +88,7 @@ class GameManager:
             return
 
         self.sm.set(GameState.RUNNING)
-        count = min(10, 2 + self.difficulty // 2 + random.randint(0, 2))
+        count = min(12, 2 + self.difficulty // 2 + random.randint(0, 2))
         for _ in range(count):
             p = Vector2(random.randint(40, WIDTH - 40), random.randint(40, HEIGHT - 40))
             e = Enemy(p, 22 + self.difficulty * 2.5, 90 + self.difficulty * 4, 10 + self.difficulty)
@@ -91,6 +109,12 @@ class GameManager:
         self.__init__(self.screen)
         self.sm.set(GameState.RUNNING)
 
+    def _on_enemy_killed(self, enemy):
+        xp = 35 if isinstance(enemy, (Boss, Reflection)) else 10 + self.difficulty
+        if self.player.gain_exp(xp):
+            self._roll_cards()
+            self.sm.set(GameState.LEVEL_UP)
+
     def _update_simulation(self, dt: float):
         keys = pygame.key.get_pressed()
         invert = any(isinstance(e, Reflection) for e in self.enemies)
@@ -102,15 +126,27 @@ class GameManager:
 
         self.player_bullets.update(dt)
 
-        for e, bullets in pygame.sprite.groupcollide(self.enemies, self.player_bullets, False, True).items():
+        # daño por balas
+        hits = pygame.sprite.groupcollide(self.enemies, self.player_bullets, False, False)
+        for enemy, bullets in hits.items():
             for b in bullets:
-                if e.take_damage(b.damage):
+                if enemy.take_damage(b.damage):
                     self.profile.register_room_clear()
+                    self._on_enemy_killed(enemy)
+
+                if self.player.lifesteal > 0:
+                    self.player.hp = min(self.player.max_hp, self.player.hp + b.damage * self.player.lifesteal * 0.15)
+
+                if b.pierce > 0:
+                    b.pierce -= 1
+                else:
+                    b.kill()
 
         for e in pygame.sprite.spritecollide(self.player, self.enemies, False):
             if self.player.hp > 0:
-                self.player.hp -= e.damage * dt * 4.0
-                self.damage_taken += e.damage * dt * 4.0
+                delta = e.damage * dt * 4.0
+                self.player.hp -= delta
+                self.damage_taken += delta
                 self.profile.register_hit_taken()
             if self.player.hp <= 0:
                 self.world_memory.complete_run(self.level, "DEFEAT")
@@ -127,6 +163,20 @@ class GameManager:
 
         self.tension.update(self.player.shots_fired, self.damage_taken, len(self.enemies), dt)
 
+    def _draw_level_up_cards(self):
+        overlay = pygame.Surface((WIDTH, HEIGHT), pygame.SRCALPHA)
+        overlay.fill((8, 10, 16, 220))
+        self.screen.blit(overlay, (0, 0))
+        title = self.font.render("LEVEL UP - Choose a card (1/2/3)", True, WHITE)
+        self.screen.blit(title, title.get_rect(center=(WIDTH // 2, 140)))
+
+        for i, (label, _) in enumerate(self.card_options, start=1):
+            r = pygame.Rect(WIDTH // 2 - 220, 180 + (i - 1) * 72, 440, 52)
+            pygame.draw.rect(self.screen, (40, 44, 58), r, border_radius=8)
+            pygame.draw.rect(self.screen, (95, 130, 220), r, 2, border_radius=8)
+            txt = self.small.render(f"{i}. {label}", True, WHITE)
+            self.screen.blit(txt, (r.x + 16, r.y + 16))
+
     def run(self):
         running = True
         while running:
@@ -139,10 +189,28 @@ class GameManager:
                         running = False
                     if self.sm.is_state(GameState.MENU) and e.key == pygame.K_RETURN:
                         self.sm.set(GameState.RUNNING)
+                    if self.sm.current in (GameState.RUNNING, GameState.BOSS) and e.key in (pygame.K_LSHIFT, pygame.K_RSHIFT):
+                        self.player.try_dash()
+                        self.profile.register_dash()
+                        self.world_memory.register_action("dash")
                     if self.sm.is_state(GameState.GAME_OVER) and e.key == pygame.K_r:
                         self._reset()
                     if self.sm.is_state(GameState.FINAL) and e.key == pygame.K_r:
                         self._reset()
+                    if self.sm.is_state(GameState.LEVEL_UP):
+                        if e.key in (pygame.K_1, pygame.K_KP1) and len(self.card_options) >= 1:
+                            self.card_options[0][1]()
+                            self.player.hp = min(self.player.max_hp, self.player.hp + 8)
+                            self.sm.set(GameState.RUNNING)
+                        elif e.key in (pygame.K_2, pygame.K_KP2) and len(self.card_options) >= 2:
+                            self.card_options[1][1]()
+                            self.player.hp = min(self.player.max_hp, self.player.hp + 8)
+                            self.sm.set(GameState.RUNNING)
+                        elif e.key in (pygame.K_3, pygame.K_KP3) and len(self.card_options) >= 3:
+                            self.card_options[2][1]()
+                            self.player.hp = min(self.player.max_hp, self.player.hp + 8)
+                            self.sm.set(GameState.RUNNING)
+
                 elif e.type == pygame.MOUSEBUTTONDOWN and e.button == 1:
                     if self.sm.current in (GameState.RUNNING, GameState.BOSS):
                         if self.player.shoot(pygame.mouse.get_pos(), self.player_bullets, self.all_sprites):
@@ -168,6 +236,8 @@ class GameManager:
                     self.screen.blit(label, label.get_rect(center=d.rect.center))
                 self.hud.draw(self.screen, self.small, self.player, self.level, self.tension.tension_level, self.profile.final_evaluation(), self.message)
 
+                if self.sm.is_state(GameState.LEVEL_UP):
+                    self._draw_level_up_cards()
                 if self.sm.is_state(GameState.GAME_OVER):
                     self.menus.draw_end(self.screen, self.font, self.small, "GAME OVER", "You were consumed by your own conflict.")
                 if self.sm.is_state(GameState.FINAL):
