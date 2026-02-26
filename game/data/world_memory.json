@@ -1,15 +1,15 @@
 {
-  "runs": 2,
+  "runs": 4,
   "best_level": 8,
   "final_types": [
     "WARRIOR",
-    "WARRIOR"
+    "WARRIOR",
+    "WARRIOR",
+    "SECRET"
   ],
   "action_buffer": [
     "shoot",
     "shoot",
-    "dash",
-    "dash",
     "shoot",
     "shoot",
     "shoot",
@@ -54,7 +54,6 @@
     "shoot",
     "shoot",
     "shoot",
-    "dash",
     "shoot",
     "shoot",
     "shoot",
@@ -63,7 +62,6 @@
     "shoot",
     "shoot",
     "shoot",
-    "dash",
     "shoot",
     "shoot",
     "shoot",
@@ -88,14 +86,13 @@
     "shoot",
     "shoot",
     "shoot",
+    "secondary",
     "shoot",
     "shoot",
     "shoot",
     "shoot",
     "shoot",
     "shoot",
-    "dash",
-    "dash",
     "shoot",
     "shoot",
     "shoot",
@@ -124,7 +121,12 @@
     "shoot",
     "shoot",
     "shoot",
-    "dash",
-    "dash"
+    "shoot",
+    "shoot",
+    "shoot",
+    "shoot",
+    "shoot",
+    "shoot",
+    "shoot"
   ]
 }
