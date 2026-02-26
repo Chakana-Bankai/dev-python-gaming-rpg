@@ -49,11 +49,10 @@ class GameManager:
         self.spawn_reflection_next = False
         self.damage_taken = 0.0
 
-        # cartas de mejora
         self.card_options: list[tuple[str, callable]] = []
+        self.door_lock_timer = 0.0
 
         self._spawn_level()
-        # Iniciar realmente en menu (evita saltarse el menu en el arranque)
         self.sm.set(GameState.MENU)
 
     def _roll_cards(self):
@@ -76,6 +75,9 @@ class GameManager:
             for s in list(g):
                 s.kill()
         self.doors.clear()
+        self.door_lock_timer = 0.65
+        self.player.pos = Vector2(WIDTH // 2, HEIGHT // 2)
+        self.player.rect.center = (int(self.player.pos.x), int(self.player.pos.y))
 
         if self.level in (3, 6, 8):
             self.sm.set(GameState.BOSS)
@@ -90,10 +92,18 @@ class GameManager:
             return
 
         self.sm.set(GameState.RUNNING)
-        count = min(12, 2 + self.difficulty // 2 + random.randint(0, 2))
+        count = min(12, 3 + self.difficulty // 2 + random.randint(0, 2))
         for _ in range(count):
             p = Vector2(random.randint(40, WIDTH - 40), random.randint(40, HEIGHT - 40))
-            e = Enemy(p, 22 + self.difficulty * 2.5, 90 + self.difficulty * 4, 10 + self.difficulty)
+            kind_roll = random.random()
+            kind = "chaser" if kind_roll < 0.55 else "rusher" if kind_roll < 0.8 else "tank"
+            e = Enemy(
+                p,
+                20 + self.difficulty * 2.8,
+                92 + self.difficulty * 4,
+                9 + self.difficulty,
+                kind=kind,
+            )
             self.enemies.add(e)
             self.all_sprites.add(e)
 
@@ -106,8 +116,6 @@ class GameManager:
             return
         self.level += 1
         self._spawn_level()
-        # Iniciar realmente en menu (evita saltarse el menu en el arranque)
-        self.sm.set(GameState.MENU)
 
     def _reset(self):
         self.__init__(self.screen)
@@ -120,6 +128,8 @@ class GameManager:
             self.sm.set(GameState.LEVEL_UP)
 
     def _update_simulation(self, dt: float):
+        self.door_lock_timer = max(0.0, self.door_lock_timer - dt)
+
         keys = pygame.key.get_pressed()
         invert = any(isinstance(e, Reflection) for e in self.enemies)
         self.player.move_input(keys, invert=invert)
@@ -130,7 +140,6 @@ class GameManager:
 
         self.player_bullets.update(dt)
 
-        # daño por balas
         hits = pygame.sprite.groupcollide(self.enemies, self.player_bullets, False, False)
         for enemy, bullets in hits.items():
             for b in bullets:
@@ -159,11 +168,12 @@ class GameManager:
         if len(self.enemies) == 0 and not self.doors:
             self.doors = self.door_system.create_doors()
 
-        for d in self.doors:
-            if self.player.rect.colliderect(d.rect):
-                self.message = self.door_system.apply(d.type, self)
-                self._advance()
-                break
+        if self.door_lock_timer <= 0:
+            for d in self.doors:
+                if self.player.rect.colliderect(d.rect):
+                    self.message = self.door_system.apply(d.type, self)
+                    self._advance()
+                    break
 
         self.tension.update(self.player.shots_fired, self.damage_taken, len(self.enemies), dt)
 
@@ -193,10 +203,17 @@ class GameManager:
                         running = False
                     if self.sm.is_state(GameState.MENU) and e.key == pygame.K_RETURN:
                         self.sm.set(GameState.RUNNING)
+                    elif self.sm.current in (GameState.RUNNING, GameState.BOSS) and e.key == pygame.K_p:
+                        self.sm.set(GameState.PAUSED)
+                    elif self.sm.is_state(GameState.PAUSED) and e.key == pygame.K_p:
+                        self.sm.set(GameState.RUNNING)
+
                     if self.sm.current in (GameState.RUNNING, GameState.BOSS) and e.key in (pygame.K_LSHIFT, pygame.K_RSHIFT):
                         self.player.try_dash()
                         self.profile.register_dash()
                         self.world_memory.register_action("dash")
+                    if self.sm.is_state(GameState.PAUSED) and e.key == pygame.K_r:
+                        self._reset()
                     if self.sm.is_state(GameState.GAME_OVER) and e.key == pygame.K_r:
                         self._reset()
                     if self.sm.is_state(GameState.FINAL) and e.key == pygame.K_r:
@@ -242,10 +259,21 @@ class GameManager:
                     pygame.draw.rect(self.screen, d.color, d.rect)
                     label = self.small.render(d.type.value, True, WHITE)
                     self.screen.blit(label, label.get_rect(center=d.rect.center))
-                self.hud.draw(self.screen, self.small, self.player, self.level, self.tension.tension_level, self.profile.final_evaluation(), self.message)
+                self.hud.draw(
+                    self.screen,
+                    self.small,
+                    self.player,
+                    self.level,
+                    self.tension.tension_level,
+                    self.profile.final_evaluation(),
+                    self.message,
+                    len(self.enemies),
+                )
 
                 if self.sm.is_state(GameState.LEVEL_UP):
                     self._draw_level_up_cards()
+                if self.sm.is_state(GameState.PAUSED):
+                    self.menus.draw_pause(self.screen, self.font, self.small)
                 if self.sm.is_state(GameState.GAME_OVER):
                     self.menus.draw_end(self.screen, self.font, self.small, "GAME OVER", "You were consumed by your own conflict.")
                 if self.sm.is_state(GameState.FINAL):

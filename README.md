@@ -51,3 +51,11 @@ game/
 - `MirrorMode`: adapta Reflection con historial de acciones.
 - `entities/`: dominio jugable (player/enemy/reflection/boss).
 - `ui/`: HUD y menús desacoplados de la lógica de simulación.
+
+
+## New controls
+
+- `P`: pause/options menu
+- `Right Click`: secondary burst skill
+- `Shift`: dash
+- `1/2/3`: pick level-up card
