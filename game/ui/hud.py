@@ -16,5 +16,11 @@ class HUD:
         screen.blit(font.render(f"Level {level_idx}/8", True, WHITE), (16, 44))
         screen.blit(font.render(f"Tension {tension:.1f}", True, WHITE), (16, 64))
         screen.blit(font.render(f"Profile {profile}", True, BLUE), (16, 84))
+
+        # EXP bar para progreso de cartas
+        ex, ey, ew, eh = 16, 108, 220, 10
+        pygame.draw.rect(screen, (40, 44, 56), (ex, ey, ew, eh), border_radius=3)
+        exp_ratio = player.exp / max(1, player.exp_next)
+        pygame.draw.rect(screen, BLUE, (ex, ey, int(ew * exp_ratio), eh), border_radius=3)
         if message:
             screen.blit(font.render(message, True, WHITE), (260, 16))

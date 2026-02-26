@@ -53,6 +53,8 @@ class GameManager:
         self.card_options: list[tuple[str, callable]] = []
 
         self._spawn_level()
+        # Iniciar realmente en menu (evita saltarse el menu en el arranque)
+        self.sm.set(GameState.MENU)
 
     def _roll_cards(self):
         p = self.player
@@ -104,6 +106,8 @@ class GameManager:
             return
         self.level += 1
         self._spawn_level()
+        # Iniciar realmente en menu (evita saltarse el menu en el arranque)
+        self.sm.set(GameState.MENU)
 
     def _reset(self):
         self.__init__(self.screen)
@@ -216,6 +220,10 @@ class GameManager:
                         if self.player.shoot(pygame.mouse.get_pos(), self.player_bullets, self.all_sprites):
                             self.profile.register_shot()
                             self.world_memory.register_action("shoot")
+                elif e.type == pygame.MOUSEBUTTONDOWN and e.button == 3:
+                    if self.sm.current in (GameState.RUNNING, GameState.BOSS):
+                        if self.player.cast_secondary(self.player_bullets, self.all_sprites):
+                            self.world_memory.register_action("secondary")
 
             if self.sm.current in (GameState.RUNNING, GameState.BOSS):
                 self._update_simulation(dt)

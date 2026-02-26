@@ -87,6 +87,10 @@ class Player(pygame.sprite.Sprite):
         self.fire_timer = 0.0
         self.shots_fired = 0
 
+        # poder secundario (click derecho)
+        self.secondary_cd = 2.0
+        self.secondary_timer = 0.0
+
         # dash por shift
         self.dash_speed = 620
         self.dash_duration = 0.12
@@ -148,8 +152,29 @@ class Player(pygame.sprite.Sprite):
         self.shots_fired += 1
         return True
 
+
+    def cast_secondary(self, bullet_group, all_sprites):
+        if self.secondary_timer > 0:
+            return False
+        for i in range(8):
+            direction = Vector2(1, 0).rotate(i * 45)
+            b = Bullet(
+                self.pos + direction * 16,
+                direction,
+                self.damage * 0.75,
+                "player",
+                life=0.85,
+                pierce=max(0, self.pierce - 1),
+                bounces=self.bounce,
+            )
+            bullet_group.add(b)
+            all_sprites.add(b)
+        self.secondary_timer = self.secondary_cd
+        return True
+
     def update(self, dt: float):
         self.fire_timer = max(0, self.fire_timer - dt)
+        self.secondary_timer = max(0, self.secondary_timer - dt)
         self.dash_cd_timer = max(0, self.dash_cd_timer - dt)
 
         v = self.vel

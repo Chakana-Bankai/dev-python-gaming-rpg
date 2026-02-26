@@ -9,6 +9,7 @@ class Enemy(pygame.sprite.Sprite):
         self.image.fill((220, 78, 96))
         self.rect = self.image.get_rect(center=(int(pos.x), int(pos.y)))
         self.pos = Vector2(pos)
+        self.max_hp = hp
         self.hp = hp
         self.speed = speed
         self.damage = damage
