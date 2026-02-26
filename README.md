@@ -59,3 +59,11 @@ game/
 - `Right Click`: secondary burst skill
 - `Shift`: dash
 - `1/2/3`: pick level-up card
+
+
+## Dramatic updates
+
+- Symbolic doors now include iconography and dramatic narrative lines (`⚔`, `☾`, `🜏`, `✦`).
+- Floating damage numbers appear for enemy and player damage.
+- Enemy roster now includes size/behavior variants (`chaser`, `rusher`, `tank`).
+- Boss archetype adapts to your build (duelist / colossus / oracle / overlord).

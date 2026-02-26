@@ -1,9 +1,10 @@
 import random
+from dataclasses import dataclass
 
 import pygame
 from pygame.math import Vector2
 
-from game.config import BG, FPS, GRID, HEIGHT, MAX_LEVELS, WHITE, WIDTH
+from game.config import BG, FPS, GRID, HEIGHT, MAX_LEVELS, RED, WHITE, WIDTH, YELLOW
 from game.core.state_machine import GameState, StateMachine
 from game.core.tension_system import TensionSystem
 from game.entities.boss import Boss
@@ -16,6 +17,18 @@ from game.systems.psychological_profile import PsychologicalProfile
 from game.systems.world_memory import WorldMemory
 from game.ui.hud import HUD
 from game.ui.menus import Menus
+
+
+@dataclass
+class FloatingText:
+    text: str
+    pos: Vector2
+    color: tuple[int, int, int]
+    life: float = 0.6
+
+    def update(self, dt: float):
+        self.life -= dt
+        self.pos.y -= 36 * dt
 
 
 class GameManager:
@@ -51,6 +64,7 @@ class GameManager:
 
         self.card_options: list[tuple[str, callable]] = []
         self.door_lock_timer = 0.0
+        self.floating_texts: list[FloatingText] = []
 
         self._spawn_level()
         self.sm.set(GameState.MENU)
@@ -85,8 +99,10 @@ class GameManager:
                 style = self.mirror_mode.infer_style(self.world_memory.data.get("action_buffer", []))
                 boss = Reflection(Vector2(WIDTH // 2, 140), style)
                 self.spawn_reflection_next = False
+                self.message = "🜏 El reflejo aprende tus pasos."
             else:
-                boss = Boss(Vector2(WIDTH // 2, 120), self.level)
+                boss = Boss(Vector2(WIDTH // 2, 120), self.level, player=self.player)
+                self.message = f"☠ Boss {self.level}: {boss.kind.upper()}"
             self.enemies.add(boss)
             self.all_sprites.add(boss)
             return
@@ -111,7 +127,7 @@ class GameManager:
         if self.level >= MAX_LEVELS:
             final_type = "SECRET" if self.damage_taken == 0 else self.profile.final_evaluation()
             self.world_memory.complete_run(self.level, final_type)
-            self.final_text = "Secret ending unlocked." if final_type == "SECRET" else f"Final archetype: {final_type}"
+            self.final_text = "✦ Final secreto: el drama se disuelve en luz." if final_type == "SECRET" else f"Final archetype: {final_type}"
             self.sm.set(GameState.FINAL)
             return
         self.level += 1
@@ -143,6 +159,7 @@ class GameManager:
         hits = pygame.sprite.groupcollide(self.enemies, self.player_bullets, False, False)
         for enemy, bullets in hits.items():
             for b in bullets:
+                self.floating_texts.append(FloatingText(str(int(b.damage)), Vector2(enemy.rect.center), YELLOW))
                 if enemy.take_damage(b.damage):
                     self.profile.register_room_clear()
                     self._on_enemy_killed(enemy)
@@ -161,6 +178,7 @@ class GameManager:
                 self.player.hp -= delta
                 self.damage_taken += delta
                 self.profile.register_hit_taken()
+                self.floating_texts.append(FloatingText(f"-{int(delta)}", Vector2(self.player.rect.center), RED))
             if self.player.hp <= 0:
                 self.world_memory.complete_run(self.level, "DEFEAT")
                 self.sm.set(GameState.GAME_OVER)
@@ -176,6 +194,11 @@ class GameManager:
                     break
 
         self.tension.update(self.player.shots_fired, self.damage_taken, len(self.enemies), dt)
+
+        for ft in list(self.floating_texts):
+            ft.update(dt)
+            if ft.life <= 0:
+                self.floating_texts.remove(ft)
 
     def _draw_level_up_cards(self):
         overlay = pygame.Surface((WIDTH, HEIGHT), pygame.SRCALPHA)
@@ -259,6 +282,11 @@ class GameManager:
                     pygame.draw.rect(self.screen, d.color, d.rect)
                     label = self.small.render(d.type.value, True, WHITE)
                     self.screen.blit(label, label.get_rect(center=d.rect.center))
+
+                for ft in self.floating_texts:
+                    txt = self.small.render(ft.text, True, ft.color)
+                    self.screen.blit(txt, txt.get_rect(center=(int(ft.pos.x), int(ft.pos.y))))
+
                 self.hud.draw(
                     self.screen,
                     self.small,
@@ -275,7 +303,7 @@ class GameManager:
                 if self.sm.is_state(GameState.PAUSED):
                     self.menus.draw_pause(self.screen, self.font, self.small)
                 if self.sm.is_state(GameState.GAME_OVER):
-                    self.menus.draw_end(self.screen, self.font, self.small, "GAME OVER", "You were consumed by your own conflict.")
+                    self.menus.draw_end(self.screen, self.font, self.small, "GAME OVER", "Tu sombra te venció.")
                 if self.sm.is_state(GameState.FINAL):
                     self.menus.draw_end(self.screen, self.font, self.small, "FINAL", self.final_text)
 

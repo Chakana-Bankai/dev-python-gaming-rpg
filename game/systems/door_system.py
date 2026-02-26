@@ -8,10 +8,10 @@ from game.config import CYAN, GREEN, HEIGHT, PURPLE, RED, WIDTH
 
 
 class DoorType(Enum):
-    CONFLICT = "Conflict"
-    CONTEMPLATION = "Contemplation"
-    SHADOW = "Shadow"
-    ASCENT = "Ascent"
+    CONFLICT = "⚔ Conflict"
+    CONTEMPLATION = "☾ Contemplation"
+    SHADOW = "🜏 Shadow"
+    ASCENT = "✦ Ascent"
 
 
 @dataclass
@@ -33,7 +33,7 @@ class DoorSystem:
     def create_doors(self):
         pool = list(DoorType)
         random.shuffle(pool)
-        w, h = 94, 24
+        w, h = 110, 24
         rects = [
             pygame.Rect(WIDTH // 2 - w // 2, 0, w, h),
             pygame.Rect(0, HEIGHT // 2 - w // 2, h, w),
@@ -45,15 +45,16 @@ class DoorSystem:
         if door_type == DoorType.CONFLICT:
             gm.difficulty += 2
             gm.player.damage += 2
-            return "Conflict embraced."
+            return "⚔ Sangre y eco: eliges conflicto, el dungeon responde con furia."
         if door_type == DoorType.CONTEMPLATION:
             gm.player.hp = min(gm.player.max_hp, gm.player.hp + 25)
-            return "Breath returns balance."
+            gm.player.fire_cd = max(0.08, gm.player.fire_cd * 0.94)
+            return "☾ Silencio interior: respiras, y el tiempo entre disparos se acorta."
         if door_type == DoorType.SHADOW:
             gm.difficulty += 1
             gm.spawn_reflection_next = True
-            return "Shadow remembers you."
+            return "🜏 Sombra asumida: lo que niegas ahora aprende tu forma."
         gm.difficulty = max(1, gm.difficulty - 1)
         gm.player.max_hp += 8
         gm.player.hp = min(gm.player.max_hp, gm.player.hp + 8)
-        return "Ascent brings clarity."
+        return "✦ Ascenso: dejas peso atrás y avanzas más liviano."
