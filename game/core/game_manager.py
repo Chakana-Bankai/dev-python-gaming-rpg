@@ -65,6 +65,7 @@ class GameManager:
         self.card_options: list[tuple[str, callable]] = []
         self.door_lock_timer = 0.0
         self.floating_texts: list[FloatingText] = []
+        self.spiritual_symbols = ["✦", "☾", "🜏", "☉", "⚚"]
 
         self._spawn_level()
         self.sm.set(GameState.MENU)
@@ -214,6 +215,24 @@ class GameManager:
             txt = self.small.render(f"{i}. {label}", True, WHITE)
             self.screen.blit(txt, (r.x + 16, r.y + 16))
 
+
+    def _draw_spiritual_overlays(self):
+        # Capa visual reactiva: más tensión/dificultad => más presencia cromática y simbólica
+        pulse = (pygame.time.get_ticks() % 1200) / 1200.0
+        alpha = int(min(120, 18 + self.difficulty * 6 + self.tension.tension_level * 7))
+        overlay = pygame.Surface((WIDTH, HEIGHT), pygame.SRCALPHA)
+        overlay.fill((35, 14, 56, alpha))
+        self.screen.blit(overlay, (0, 0))
+
+        symbol_count = min(18, 5 + self.difficulty + int(self.tension.tension_level))
+        for i in range(symbol_count):
+            x = (i * 137 + pygame.time.get_ticks() // 9) % WIDTH
+            y = (i * 79 + pygame.time.get_ticks() // 13) % HEIGHT
+            s = self.spiritual_symbols[i % len(self.spiritual_symbols)]
+            col = (170, 120 + int(80 * pulse), 220)
+            txt = self.small.render(s, True, col)
+            self.screen.blit(txt, (x, y))
+
     def run(self):
         running = True
         while running:
@@ -274,6 +293,9 @@ class GameManager:
             for y in range(0, HEIGHT, 48):
                 pygame.draw.line(self.screen, GRID, (0, y), (WIDTH, y), 1)
 
+            if self.sm.current in (GameState.RUNNING, GameState.BOSS, GameState.LEVEL_UP, GameState.PAUSED):
+                self._draw_spiritual_overlays()
+
             if self.sm.is_state(GameState.MENU):
                 self.menus.draw_menu(self.screen, self.font, self.small)
             else:
@@ -296,6 +318,7 @@ class GameManager:
                     self.profile.final_evaluation(),
                     self.message,
                     len(self.enemies),
+                    self.difficulty,
                 )
 
                 if self.sm.is_state(GameState.LEVEL_UP):
