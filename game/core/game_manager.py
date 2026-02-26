@@ -7,7 +7,7 @@ from pygame.math import Vector2
 from game.config import BG, FPS, GRID, HEIGHT, MAX_LEVELS, RED, WHITE, WIDTH, YELLOW
 from game.core.state_machine import GameState, StateMachine
 from game.core.tension_system import TensionSystem
-from game.entities.boss import Boss
+from game.entities.boss import Boss, OmegaBoss
 from game.entities.enemy import Enemy
 from game.entities.player import Player
 from game.entities.reflection import Reflection
@@ -75,12 +75,25 @@ class GameManager:
         pool = [
             ("+25 HP max", lambda: setattr(p, "max_hp", p.max_hp + 25)),
             ("+4 Damage", lambda: setattr(p, "damage", p.damage + 4)),
-            ("Triple Shot", lambda: setattr(p, "triple_shot", True)),
-            ("Piercing +1", lambda: setattr(p, "pierce", min(3, p.pierce + 1))),
-            ("Bounce +1", lambda: setattr(p, "bounce", min(3, p.bounce + 1))),
-            ("Critical +10%", lambda: setattr(p, "crit_bonus", min(0.4, p.crit_bonus + 0.10))),
-            ("Lifesteal +5%", lambda: setattr(p, "lifesteal", min(0.25, p.lifesteal + 0.05))),
-            ("Dash CD -15%", lambda: setattr(p, "dash_cd", max(0.4, p.dash_cd * 0.85))),
+            ("Mode: Triple", lambda: p.weapon_modes.add("triple")),
+            ("Mode: Fan Shot", lambda: p.weapon_modes.add("fan_shot")),
+            ("Mode: Cross Shot", lambda: p.weapon_modes.add("cross_shot")),
+            ("Mode: Backfire", lambda: p.weapon_modes.add("backfire")),
+            ("Mode: Chaos", lambda: p.weapon_modes.add("chaos")),
+            ("Mode: Spiral", lambda: p.weapon_modes.add("spiral")),
+            ("Mode: Heavy Rounds", lambda: p.weapon_modes.add("heavy_rounds")),
+            ("Mode: Sniper", lambda: p.weapon_modes.add("sniper")),
+            ("Mode: Rapid Fire", lambda: p.weapon_modes.add("rapid_fire")),
+            ("Mode: Nova+", lambda: p.weapon_modes.add("nova_plus")),
+            ("Mode: Ricochet+", lambda: p.weapon_modes.add("ricochet_plus")),
+            ("Mode: Pierce+", lambda: p.weapon_modes.add("pierce_plus")),
+            ("Mode: Storm Crit", lambda: p.weapon_modes.add("storm_crit")),
+            ("Mode: Long Life", lambda: p.weapon_modes.add("long_life")),
+            ("Piercing +1", lambda: setattr(p, "pierce", min(4, p.pierce + 1))),
+            ("Bounce +1", lambda: setattr(p, "bounce", min(4, p.bounce + 1))),
+            ("Critical +10%", lambda: setattr(p, "crit_bonus", min(0.5, p.crit_bonus + 0.10))),
+            ("Lifesteal +5%", lambda: setattr(p, "lifesteal", min(0.30, p.lifesteal + 0.05))),
+            ("Dash CD -15%", lambda: setattr(p, "dash_cd", max(0.35, p.dash_cd * 0.85))),
         ]
         random.shuffle(pool)
         self.card_options = pool[:3]
@@ -96,7 +109,10 @@ class GameManager:
 
         if self.level in (3, 6, 8):
             self.sm.set(GameState.BOSS)
-            if self.spawn_reflection_next:
+            if self.level == 8:
+                boss = OmegaBoss(Vector2(WIDTH // 2, 120), self.difficulty)
+                self.message = "☠☠☠ OMEGA FINAL: el abismo te mira de vuelta."
+            elif self.spawn_reflection_next:
                 style = self.mirror_mode.infer_style(self.world_memory.data.get("action_buffer", []))
                 boss = Reflection(Vector2(WIDTH // 2, 140), style)
                 self.spawn_reflection_next = False
@@ -126,9 +142,9 @@ class GameManager:
 
     def _advance(self):
         if self.level >= MAX_LEVELS:
-            final_type = "SECRET" if self.damage_taken == 0 else self.profile.final_evaluation()
+            final_type = self.profile.final_evaluation()
             self.world_memory.complete_run(self.level, final_type)
-            self.final_text = "✦ Final secreto: el drama se disuelve en luz." if final_type == "SECRET" else f"Final archetype: {final_type}"
+            self.final_text = f"Final espiritual: {final_type}. No hay destino oculto, solo elección."
             self.sm.set(GameState.FINAL)
             return
         self.level += 1
@@ -139,7 +155,7 @@ class GameManager:
         self.sm.set(GameState.RUNNING)
 
     def _on_enemy_killed(self, enemy):
-        xp = 35 if isinstance(enemy, (Boss, Reflection)) else 10 + self.difficulty
+        xp = 60 if isinstance(enemy, OmegaBoss) else 35 if isinstance(enemy, (Boss, Reflection)) else 10 + self.difficulty
         if self.player.gain_exp(xp):
             self._roll_cards()
             self.sm.set(GameState.LEVEL_UP)
@@ -315,7 +331,7 @@ class GameManager:
                     self.player,
                     self.level,
                     self.tension.tension_level,
-                    self.profile.final_evaluation(),
+                    f"{self.profile.final_evaluation()} | Modes {len(self.player.weapon_modes)}",
                     self.message,
                     len(self.enemies),
                     self.difficulty,

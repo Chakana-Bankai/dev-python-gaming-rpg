@@ -36,7 +36,6 @@ class Bullet(pygame.sprite.Sprite):
             return
         self.pos += self.dir * 560 * dt
 
-        # rebote básico en límites
         if self.pos.x <= 0 or self.pos.x >= WIDTH:
             if self.bounces > 0:
                 self.bounces -= 1
@@ -71,13 +70,11 @@ class Player(pygame.sprite.Sprite):
         self.speed = 220
         self.damage = 16
 
-        # progresión
         self.level = 1
         self.exp = 0
         self.exp_next = 45
 
-        # rasgos secundarios / modular weapon
-        self.triple_shot = False
+        self.weapon_modes: set[str] = set()
         self.pierce = 0
         self.bounce = 0
         self.crit_bonus = 0.0
@@ -86,12 +83,11 @@ class Player(pygame.sprite.Sprite):
         self.fire_cd = 0.16
         self.fire_timer = 0.0
         self.shots_fired = 0
+        self._shot_phase = 0
 
-        # poder secundario (click derecho)
         self.secondary_cd = 2.0
         self.secondary_timer = 0.0
 
-        # dash por shift
         self.dash_speed = 620
         self.dash_duration = 0.12
         self.dash_cd = 1.0
@@ -124,46 +120,76 @@ class Player(pygame.sprite.Sprite):
             leveled = True
         return leveled
 
+    def _build_dirs(self, base: Vector2) -> list[Vector2]:
+        dirs = [base]
+        if "triple" in self.weapon_modes:
+            dirs += [base.rotate(-12), base.rotate(12)]
+        if "fan_shot" in self.weapon_modes:
+            dirs += [base.rotate(-24), base.rotate(24)]
+        if "cross_shot" in self.weapon_modes:
+            dirs += [base.rotate(90), base.rotate(-90)]
+        if "backfire" in self.weapon_modes:
+            dirs.append(base.rotate(180))
+        if "chaos" in self.weapon_modes:
+            dirs += [base.rotate(random.uniform(-40, 40)) for _ in range(2)]
+        if "spiral" in self.weapon_modes:
+            self._shot_phase = (self._shot_phase + 18) % 360
+            dirs += [base.rotate(self._shot_phase), base.rotate(-self._shot_phase)]
+        # normalizar y deduplicar aproximada
+        out = []
+        for d in dirs:
+            if d.length_squared() > 0:
+                out.append(d.normalize())
+        return out
+
     def shoot(self, mouse_pos, bullet_group, all_sprites):
         if self.fire_timer > 0:
             return False
         d = Vector2(mouse_pos) - self.pos
         if d.length_squared() == 0:
             d = Vector2(1, 0)
+        base = d.normalize()
 
-        dirs = [d.normalize()]
-        if self.triple_shot:
-            dirs = [d.normalize().rotate(-12), d.normalize(), d.normalize().rotate(12)]
+        dirs = self._build_dirs(base)
+        mult = 1.0
+        if "heavy_rounds" in self.weapon_modes:
+            mult *= 1.35
+        if "sniper" in self.weapon_modes:
+            mult *= 1.45
 
         for direction in dirs:
-            crit = random.random() < (0.1 + self.crit_bonus)
+            crit = random.random() < (0.1 + self.crit_bonus + (0.08 if "storm_crit" in self.weapon_modes else 0.0))
             b = Bullet(
                 self.pos + direction * 18,
                 direction,
-                self.damage * (1.8 if crit else 1),
+                self.damage * mult * (1.8 if crit else 1),
                 "player",
-                pierce=self.pierce,
-                bounces=self.bounce,
+                pierce=self.pierce + (1 if "pierce_plus" in self.weapon_modes else 0),
+                bounces=self.bounce + (1 if "ricochet_plus" in self.weapon_modes else 0),
+                life=1.35 if "long_life" in self.weapon_modes else 1.1,
             )
             bullet_group.add(b)
             all_sprites.add(b)
 
-        self.fire_timer = self.fire_cd
+        if "rapid_fire" in self.weapon_modes:
+            self.fire_timer = max(0.06, self.fire_cd * 0.75)
+        else:
+            self.fire_timer = self.fire_cd
         self.shots_fired += 1
         return True
-
 
     def cast_secondary(self, bullet_group, all_sprites):
         if self.secondary_timer > 0:
             return False
-        for i in range(8):
-            direction = Vector2(1, 0).rotate(i * 45)
+        count = 10 if "nova_plus" in self.weapon_modes else 8
+        for i in range(count):
+            direction = Vector2(1, 0).rotate(i * (360 / count))
             b = Bullet(
                 self.pos + direction * 16,
                 direction,
-                self.damage * 0.75,
+                self.damage * (0.85 if "nova_plus" in self.weapon_modes else 0.75),
                 "player",
-                life=0.85,
+                life=1.05,
                 pierce=max(0, self.pierce - 1),
                 bounces=self.bounce,
             )
