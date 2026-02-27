@@ -68,6 +68,8 @@ class GameManager:
         self.message = ""
         self.final_text = ""
         self.spawn_reflection_next = False
+        self.door_history: list[str] = []
+        self.secret_unlocked = False
         self.damage_taken = 0.0
         self.consecutive_hits = 0
         self.focus_accumulator = Vector2(self.player.pos)
@@ -159,11 +161,11 @@ class GameManager:
             return
 
         self.sm.set(GameState.RUNNING)
-        count = min(12, 3 + self.difficulty // 2 + random.randint(0, 2))
+        count = min(24, 6 + self.difficulty + random.randint(1, 5))
         for _ in range(count):
             p = Vector2(random.randint(40, WIDTH - 40), random.randint(40, HEIGHT - 40))
             kind_roll = random.random()
-            kind = "chaser" if kind_roll < 0.55 else "rusher" if kind_roll < 0.8 else "tank"
+            kind = "chaser" if kind_roll < 0.45 else "rusher" if kind_roll < 0.78 else "tank"
             e = Enemy(p, 20 + self.difficulty * 2.8, 92 + self.difficulty * 4, 9 + self.difficulty, kind=kind)
             self.enemies.add(e)
             self.all_sprites.add(e)
@@ -246,7 +248,7 @@ class GameManager:
                 if e.phase != prev_phase:
                     self.tension.tension_level = min(10.0, self.tension.tension_level + 1.0)
                     self.audio.play_sfx("geom_phase_shift")
-                if e.phase == 3:
+                if e.phase >= 3:
                     for f in e.split_fragments():
                         self.enemies.add(f)
                         self.all_sprites.add(f)
@@ -317,6 +319,16 @@ class GameManager:
             for d in self.doors:
                 if self.player.rect.colliderect(d.rect):
                     self.message = self.door_system.apply(d.type, self)
+                    self.geometry.set_door_theme(d.type.name)
+                    self.door_history.append(d.type.name)
+                    if len(self.door_history) > 5:
+                        self.door_history = self.door_history[-5:]
+                    if self.door_history[-3:] == ["SHADOW", "CONFLICT", "ASCENT"] and not self.secret_unlocked:
+                        self.secret_unlocked = True
+                        self.message = "✶ RUTA OCULTA: La sala recuerda tus tres símbolos." 
+                        self.difficulty += 2
+                        self.player.max_hp += 20
+                        self.player.hp = min(self.player.max_hp, self.player.hp + 20)
                     self._advance()
                     break
 

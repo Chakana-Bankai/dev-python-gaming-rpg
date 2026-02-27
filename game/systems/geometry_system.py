@@ -341,6 +341,27 @@ class GeometrySystem:
             boss.impulse = getattr(boss, "impulse", Vector2()) + delta * -6
             self.visual_pulse = 0.8
 
+
+    def set_door_theme(self, door_name: str):
+        # Modula la arena según la puerta elegida para diversificar jugabilidad.
+        if door_name == "CONFLICT":
+            self.phase_configs[1].cut_lines = [{"a": Vector2(340, 120), "b": Vector2(620, 300)}]
+            self.phase_configs[2].global_rotation_speed = 16
+            self.phase_configs[3].global_rotation_speed = 24
+        elif door_name == "CONTEMPLATION":
+            self.phase_configs[1].cut_lines = []
+            self.phase_configs[2].gravity_zone = {"center": Vector2(WIDTH / 2, HEIGHT / 2), "radius": 145, "slow_pct": 0.28}
+            self.phase_configs[3].gravity_zone = {"center": Vector2(WIDTH / 2, HEIGHT / 2), "radius": 160, "slow_pct": 0.30}
+        elif door_name == "SHADOW":
+            self.phase_configs[2].cut_lines = [{"a": Vector2(180, 180), "b": Vector2(760, 460)}]
+            self.phase_configs[3].cut_lines = [
+                {"a": Vector2(220, 120), "b": Vector2(220, 520)},
+                {"a": Vector2(700, 120), "b": Vector2(700, 520)},
+            ]
+        elif door_name == "ASCENT":
+            self.phase_configs[1].reflectors = [{"center": Vector2(260, 250), "rotation": 0}, {"center": Vector2(620, 250), "rotation": 180}]
+            self.phase_configs[2].reflectors = [{"center": Vector2(220, 220), "rotation": 25}, {"center": Vector2(680, 330), "rotation": 210}]
+
     def draw(self, screen):
         pygame.draw.rect(screen, (60, 80, 110), self.arena_bounds, 2)
         if self.visual_pulse > 0:

@@ -127,27 +127,55 @@ class OmegaFragment(Enemy):
 
 
 class OmegaBoss(Enemy):
-    """Omega final boss con 3 fases: Reflection -> Inversion -> Dual Manifestation."""
+    """Omega final boss con 4 fases épicas y transformación visual."""
 
     def __init__(self, pos: Vector2, difficulty: int):
-        super().__init__(pos, hp=1100 + difficulty * 140, speed=120 + difficulty * 6, damage=28 + difficulty * 1.4, kind="omega")
-        self.image = pygame.Surface((76, 76), pygame.SRCALPHA)
-        self.image.fill((235, 88, 140))
-        self.rect = self.image.get_rect(center=(int(pos.x), int(pos.y)))
+        super().__init__(pos, hp=1100 + difficulty * 160, speed=124 + difficulty * 7, damage=30 + difficulty * 1.5, kind="omega")
         self.phase = 1
         self.timer = 0.0
         self.arena_shrink = 0.0
         self._split_done = False
         self.impulse = Vector2()
+        self._apply_phase_visual()
+        self.rect = self.image.get_rect(center=(int(pos.x), int(pos.y)))
+
+    def _apply_phase_visual(self):
+        phase_style = {
+            1: (76, (235, 88, 140)),
+            2: (84, (196, 76, 210)),
+            3: (90, (120, 208, 236)),
+            4: (98, (248, 120, 88)),
+        }
+        size, col = phase_style[self.phase]
+        self.image = pygame.Surface((size, size), pygame.SRCALPHA)
+        self.image.fill(col)
+
+    def _set_phase(self, new_phase: int):
+        if new_phase != self.phase:
+            self.phase = new_phase
+            self._apply_phase_visual()
+            self.rect = self.image.get_rect(center=(int(self.pos.x), int(self.pos.y)))
+
+    def _clamp_to_arena(self, arena_bounds):
+        if not arena_bounds:
+            return
+        old = Vector2(self.pos)
+        self.pos.x = max(arena_bounds.left + 24, min(arena_bounds.right - 24, self.pos.x))
+        self.pos.y = max(arena_bounds.top + 24, min(arena_bounds.bottom - 24, self.pos.y))
+        if old != self.pos:
+            bounce = self.pos - old
+            self.impulse += bounce * -6.8
 
     def update(self, dt: float, player_pos: Vector2, player, action_buffer: list[str], geometry_context=None):
         self.timer += dt
         ratio = self.hp / self.max_hp if self.max_hp else 0
 
-        if ratio < 0.66 and self.phase == 1:
-            self.phase = 2
-        if ratio < 0.33 and self.phase == 2:
-            self.phase = 3
+        if ratio < 0.75 and self.phase == 1:
+            self._set_phase(2)
+        if ratio < 0.5 and self.phase == 2:
+            self._set_phase(3)
+        if ratio < 0.25 and self.phase == 3:
+            self._set_phase(4)
 
         d = player_pos - self.pos
         direction = d.normalize() if d.length_squared() > 0 else Vector2(1, 0)
@@ -157,29 +185,40 @@ class OmegaBoss(Enemy):
             self.pos += direction * self.speed * boost * dt
         elif self.phase == 2:
             inv = -direction
-            orbit = Vector2(-inv.y, inv.x) * 0.4
+            orbit = Vector2(-inv.y, inv.x) * 0.45
             mv = (inv + orbit)
             if mv.length_squared() > 0:
                 mv = mv.normalize()
-            self.pos += mv * self.speed * 1.15 * dt
-            self.arena_shrink = min(120.0, self.arena_shrink + 22 * dt)
-        else:
-            zig = Vector2(math.sin(self.timer * 4.5), math.cos(self.timer * 3.2)) * 0.7
-            mv = (direction * 0.6 + zig)
+            self.pos += mv * self.speed * 1.18 * dt
+            self.arena_shrink = min(140.0, self.arena_shrink + 24 * dt)
+        elif self.phase == 3:
+            zig = Vector2(math.sin(self.timer * 4.8), math.cos(self.timer * 3.5)) * 0.75
+            mv = (direction * 0.58 + zig)
             if mv.length_squared() > 0:
                 mv = mv.normalize()
-            self.pos += mv * self.speed * 1.2 * dt
+            self.pos += mv * self.speed * 1.28 * dt
+        else:
+            spiral = Vector2(math.sin(self.timer * 6.0), math.cos(self.timer * 6.8))
+            mv = (direction * 0.8 + spiral * 0.9)
+            if mv.length_squared() > 0:
+                mv = mv.normalize()
+            self.pos += mv * self.speed * 1.42 * dt
 
         self.impulse *= (1.0 - min(1.0, dt * 4.0))
         self.pos = Vector2(self.pos) + self.impulse * dt
+
         if not (math.isfinite(self.pos.x) and math.isfinite(self.pos.y)):
             self.pos = Vector2(player_pos)
+
+        arena_bounds = geometry_context.get("arena_bounds") if geometry_context else None
+        self._clamp_to_arena(arena_bounds)
+
         self.rect.center = (int(self.pos.x), int(self.pos.y))
 
     def split_fragments(self):
         if self._split_done:
             return []
         self._split_done = True
-        shadow = OmegaFragment(Vector2(self.pos.x - 70, self.pos.y), self.max_hp * 0.22, self.speed * 1.25, self.damage * 1.2, "Shadow")
-        silence = OmegaFragment(Vector2(self.pos.x + 70, self.pos.y), self.max_hp * 0.25, self.speed * 0.85, self.damage * 0.9, "Silence")
+        shadow = OmegaFragment(Vector2(self.pos.x - 90, self.pos.y), self.max_hp * 0.2, self.speed * 1.3, self.damage * 1.22, "Shadow")
+        silence = OmegaFragment(Vector2(self.pos.x + 90, self.pos.y), self.max_hp * 0.22, self.speed * 0.9, self.damage * 0.95, "Silence")
         return [shadow, silence]
