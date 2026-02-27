@@ -71,3 +71,13 @@ game/
 - Floating damage numbers appear for enemy and player damage.
 - Enemy roster now includes size/behavior variants (`chaser`, `rusher`, `tank`).
 - Boss archetype adapts to your build (duelist / colossus / oracle / overlord).
+
+
+## FAQ
+
+- **¿Por qué tengo que hacer commit al cerrar el juego?**
+  No deberías. El juego no exige commits. Los commits son parte del flujo del agente/desarrollo, no una mecánica del runtime.
+- **¿Por qué no veía sonido?**
+  Ahora el proyecto incluye SFX sintéticos (sin assets) para disparos, daño y aparición de bosses.
+- **¿Por qué algunos símbolos no se veían?**
+  Era un tema de fuente/render de glifos, no de vectores. Se mejoró el fallback de fuente simbólica y se normalizaron algunos iconos.

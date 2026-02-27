@@ -15,6 +15,7 @@ from game.systems.door_system import DoorSystem
 from game.systems.mirror_mode import MirrorMode
 from game.systems.psychological_profile import PsychologicalProfile
 from game.systems.world_memory import WorldMemory
+from game.systems.sound_system import SoundSystem
 from game.ui.hud import HUD
 from game.ui.menus import Menus
 
@@ -37,6 +38,7 @@ class GameManager:
         self.clock = pygame.time.Clock()
         self.font = pygame.font.SysFont("consolas", 22)
         self.small = pygame.font.SysFont("consolas", 16)
+        self.symbol_font = pygame.font.SysFont("segoeuisymbol,dejavusans,arial", 16)
 
         self.sm = StateMachine()
         self.tension = TensionSystem()
@@ -44,6 +46,7 @@ class GameManager:
         self.profile = PsychologicalProfile()
         self.door_system = DoorSystem()
         self.mirror_mode = MirrorMode()
+        self.sound = SoundSystem()
         self.hud = HUD()
         self.menus = Menus()
 
@@ -65,7 +68,7 @@ class GameManager:
         self.card_options: list[tuple[str, callable]] = []
         self.door_lock_timer = 0.0
         self.floating_texts: list[FloatingText] = []
-        self.spiritual_symbols = ["✦", "☾", "🜏", "☉", "⚚"]
+        self.spiritual_symbols = ["✦", "☾", "∆", "☉", "⚚"]
 
         self._spawn_level()
         self.sm.set(GameState.MENU)
@@ -112,14 +115,17 @@ class GameManager:
             if self.level == 8:
                 boss = OmegaBoss(Vector2(WIDTH // 2, 120), self.difficulty)
                 self.message = "☠☠☠ OMEGA FINAL: el abismo te mira de vuelta."
+                self.sound.boss_spawn()
             elif self.spawn_reflection_next:
                 style = self.mirror_mode.infer_style(self.world_memory.data.get("action_buffer", []))
                 boss = Reflection(Vector2(WIDTH // 2, 140), style)
                 self.spawn_reflection_next = False
-                self.message = "🜏 El reflejo aprende tus pasos."
+                self.message = "∆ El reflejo aprende tus pasos."
+                self.sound.boss_spawn()
             else:
                 boss = Boss(Vector2(WIDTH // 2, 120), self.level, player=self.player)
                 self.message = f"☠ Boss {self.level}: {boss.kind.upper()}"
+                self.sound.boss_spawn()
             self.enemies.add(boss)
             self.all_sprites.add(boss)
             return
@@ -177,6 +183,7 @@ class GameManager:
         for enemy, bullets in hits.items():
             for b in bullets:
                 self.floating_texts.append(FloatingText(str(int(b.damage)), Vector2(enemy.rect.center), YELLOW))
+                self.sound.hit_enemy()
                 if enemy.take_damage(b.damage):
                     self.profile.register_room_clear()
                     self._on_enemy_killed(enemy)
@@ -196,6 +203,7 @@ class GameManager:
                 self.damage_taken += delta
                 self.profile.register_hit_taken()
                 self.floating_texts.append(FloatingText(f"-{int(delta)}", Vector2(self.player.rect.center), RED))
+                self.sound.hit_player()
             if self.player.hp <= 0:
                 self.world_memory.complete_run(self.level, "DEFEAT")
                 self.sm.set(GameState.GAME_OVER)
@@ -246,7 +254,7 @@ class GameManager:
             y = (i * 79 + pygame.time.get_ticks() // 13) % HEIGHT
             s = self.spiritual_symbols[i % len(self.spiritual_symbols)]
             col = (170, 120 + int(80 * pulse), 220)
-            txt = self.small.render(s, True, col)
+            txt = self.symbol_font.render(s, True, col)
             self.screen.blit(txt, (x, y))
 
     def run(self):
@@ -295,10 +303,12 @@ class GameManager:
                         if self.player.shoot(pygame.mouse.get_pos(), self.player_bullets, self.all_sprites):
                             self.profile.register_shot()
                             self.world_memory.register_action("shoot")
+                            self.sound.shoot()
                 elif e.type == pygame.MOUSEBUTTONDOWN and e.button == 3:
                     if self.sm.current in (GameState.RUNNING, GameState.BOSS):
                         if self.player.cast_secondary(self.player_bullets, self.all_sprites):
                             self.world_memory.register_action("secondary")
+                            self.sound.secondary()
 
             if self.sm.current in (GameState.RUNNING, GameState.BOSS):
                 self._update_simulation(dt)

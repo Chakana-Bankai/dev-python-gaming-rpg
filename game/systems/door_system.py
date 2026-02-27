@@ -8,10 +8,10 @@ from game.config import CYAN, GREEN, HEIGHT, PURPLE, RED, WIDTH
 
 
 class DoorType(Enum):
-    CONFLICT = "⚔ Conflict"
-    CONTEMPLATION = "☾ Contemplation"
-    SHADOW = "🜏 Shadow"
-    ASCENT = "✦ Ascent"
+    CONFLICT = "[⚔] Conflict"
+    CONTEMPLATION = "[☾] Contemplation"
+    SHADOW = "[∆] Shadow"
+    ASCENT = "[✦] Ascent"
 
 
 @dataclass
@@ -53,7 +53,7 @@ class DoorSystem:
         if door_type == DoorType.SHADOW:
             gm.difficulty += 1
             gm.spawn_reflection_next = True
-            return "🜏 Sombra asumida: lo que niegas ahora aprende tu forma."
+            return "∆ Sombra asumida: lo que niegas ahora aprende tu forma."
         gm.difficulty = max(1, gm.difficulty - 1)
         gm.player.max_hp += 8
         gm.player.hp = min(gm.player.max_hp, gm.player.hp + 8)
