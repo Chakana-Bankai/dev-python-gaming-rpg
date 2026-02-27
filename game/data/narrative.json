@@ -1,0 +1,34 @@
+{
+  "fragments": [
+    {
+      "title": "La Caída",
+      "base": ["Todo inició cuando olvidaste tu nombre frente al vacío.", "La sala cayó primero, luego tu certeza."],
+      "unlocked": ["Ahora sabes que caer también es recordar."]
+    },
+    {
+      "title": "El Llamado",
+      "base": ["Una figura geométrica te pide avanzar sin mirar atrás.", "Escuchas un pulso suave: no es amenaza, es invitación."],
+      "unlocked": ["La voz cambia con tu lucidez: ya no ordena, conversa."]
+    },
+    {
+      "title": "La Fragmentación",
+      "base": ["Tu voluntad se divide en trayectorias opuestas.", "Cada disparo deja una versión de ti en la arena."],
+      "unlocked": ["Entre fragmentos reconoces patrones que antes eran ruido."]
+    },
+    {
+      "title": "La Purificación",
+      "base": ["Lo innecesario arde y cae en silencio.", "Purificar no es perder: es enfocar."],
+      "unlocked": ["Las líneas de corte ya no te expulsan: te enseñan límite."]
+    },
+    {
+      "title": "El Guardián",
+      "base": ["Frente a ti no hay monstruo: hay espejo con hambre.", "El Guardián aprende tu ritmo antes que tú."],
+      "unlocked": ["Al reconocer tu reflejo, su furia pierde forma."]
+    },
+    {
+      "title": "El Recuerdo",
+      "base": ["No saliste del laberinto: el laberinto salió contigo.", "Cada regreso abre una capa nueva de comprensión."],
+      "unlocked": ["La memoria ya no pesa; orienta."]
+    }
+  ]
+}
