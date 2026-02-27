@@ -6,7 +6,6 @@ import pygame
 
 from game.config import HEIGHT, WHITE, WIDTH
 from game.scenes.base_scene import BaseScene
-from game.scenes.narrative_scene import NarrativeScene
 
 
 class EndingScene(BaseScene):
@@ -24,6 +23,8 @@ class EndingScene(BaseScene):
     def handle_event(self, event):
         if event.type == pygame.KEYDOWN and event.key == pygame.K_RETURN and self.t > 0.8:
             self.ctx["progression"].on_new_run()
+            from game.scenes.narrative_scene import NarrativeScene
+
             self._next = NarrativeScene(self.ctx, fragment_index=min(5, self.ctx["save"].data["runs_completed"]))
 
     def update(self, dt: float):
