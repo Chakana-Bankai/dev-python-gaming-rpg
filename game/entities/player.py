@@ -16,10 +16,19 @@ class Bullet(pygame.sprite.Sprite):
         life: float = 1.1,
         pierce: int = 0,
         bounces: int = 0,
+        color: tuple[int, int, int] = YELLOW,
+        shape: str = "bar",
     ):
         super().__init__()
-        self.image = pygame.Surface((8, 4), pygame.SRCALPHA)
-        self.image.fill(YELLOW)
+        w, h = (8, 4) if shape == "bar" else (7, 7) if shape == "orb" else (10, 10)
+        self.image = pygame.Surface((w, h), pygame.SRCALPHA)
+        if shape == "orb":
+            pygame.draw.circle(self.image, color, (w // 2, h // 2), min(w, h) // 2)
+        elif shape == "diamond":
+            pygame.draw.polygon(self.image, color, [(w // 2, 0), (w - 1, h // 2), (w // 2, h - 1), (0, h // 2)])
+        else:
+            self.image.fill(color)
+
         self.rect = self.image.get_rect(center=(int(pos.x), int(pos.y)))
         self.pos = Vector2(pos)
         self.dir = direction.normalize() if direction.length_squared() else Vector2(1, 0)
@@ -149,12 +158,22 @@ class Player(pygame.sprite.Sprite):
         if "helix" in self.weapon_modes:
             self._shot_phase = (self._shot_phase + 28) % 360
             dirs += [base.rotate(self._shot_phase * 0.5), base.rotate(-self._shot_phase * 0.5)]
-        # normalizar y deduplicar aproximada
         out = []
         for d in dirs:
             if d.length_squared() > 0:
                 out.append(d.normalize())
         return out
+
+    def _bullet_style(self):
+        if "helix" in self.weapon_modes:
+            return (120, 210, 255), "orb"
+        if "prism" in self.weapon_modes:
+            return (240, 160, 255), "diamond"
+        if "sigil" in self.weapon_modes:
+            return (255, 210, 120), "diamond"
+        if "chaos" in self.weapon_modes:
+            return random.choice([(255, 180, 100), (120, 255, 200), (255, 120, 210)]), "bar"
+        return YELLOW, "bar"
 
     def shoot(self, mouse_pos, bullet_group, all_sprites):
         if self.fire_timer > 0:
@@ -171,6 +190,7 @@ class Player(pygame.sprite.Sprite):
         if "sniper" in self.weapon_modes:
             mult *= 1.45
 
+        color, shape = self._bullet_style()
         for direction in dirs:
             crit = random.random() < (0.1 + self.crit_bonus + (0.08 if "storm_crit" in self.weapon_modes else 0.0))
             b = Bullet(
@@ -181,6 +201,8 @@ class Player(pygame.sprite.Sprite):
                 pierce=self.pierce + (1 if "pierce_plus" in self.weapon_modes else 0),
                 bounces=self.bounce + (1 if "ricochet_plus" in self.weapon_modes else 0),
                 life=1.35 if "long_life" in self.weapon_modes else 1.1,
+                color=color,
+                shape=shape,
             )
             bullet_group.add(b)
             all_sprites.add(b)
@@ -195,17 +217,19 @@ class Player(pygame.sprite.Sprite):
     def cast_secondary(self, bullet_group, all_sprites):
         if self.secondary_timer > 0:
             return False
-        count = 10 if "nova_plus" in self.weapon_modes else 8
+        count = 12 if "nova_plus" in self.weapon_modes else 9
         for i in range(count):
             direction = Vector2(1, 0).rotate(i * (360 / count))
             b = Bullet(
                 self.pos + direction * 16,
                 direction,
-                self.damage * (0.85 if "nova_plus" in self.weapon_modes else 0.75),
+                self.damage * (0.82 if "nova_plus" in self.weapon_modes else 0.72),
                 "player",
                 life=1.05,
                 pierce=max(0, self.pierce - 1),
                 bounces=self.bounce,
+                color=(130, 220, 255),
+                shape="orb",
             )
             bullet_group.add(b)
             all_sprites.add(b)
