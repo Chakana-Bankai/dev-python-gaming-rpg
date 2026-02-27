@@ -4,6 +4,16 @@ from game.config import BLUE, GREEN, HEIGHT, ORANGE, RED, WHITE, WIDTH
 
 
 class HUD:
+    def _draw_shape_icon(self, screen, x: int, y: int, color: tuple[int, int, int], shape: str):
+        if shape == "circle":
+            pygame.draw.circle(screen, color, (x, y), 8)
+        elif shape == "hex":
+            pygame.draw.polygon(screen, color, [(x, y - 8), (x + 7, y - 4), (x + 7, y + 4), (x, y + 8), (x - 7, y + 4), (x - 7, y - 4)])
+        elif shape == "diamond":
+            pygame.draw.polygon(screen, color, [(x, y - 8), (x + 8, y), (x, y + 8), (x - 8, y)])
+        else:
+            pygame.draw.rect(screen, color, pygame.Rect(x - 7, y - 7, 14, 14))
+
     def draw(
         self,
         screen,
@@ -46,6 +56,7 @@ class HUD:
         screen.blit(font.render(f"Df {difficulty}", True, WHITE), (710, 10))
         screen.blit(font.render(f"Arq {profile}", True, BLUE), (790, 10))
         screen.blit(font.render(f"⚡ {weapon_label}", True, WHITE), (980, 10))
+        self._draw_shape_icon(screen, 960, 18, (170, 220, 255), "diamond")
         if has_sacred_key:
             screen.blit(font.render("🗝", True, (247, 229, 138)), (1170, 10))
 

@@ -153,15 +153,26 @@ class OmegaBoss(Enemy):
 
     def _draw_form(self, size: int, col: tuple[int, int, int], shape: str):
         c = size // 2
+        # Multi-bloque 8-bit: compone la figura con clusters de cuadrados.
+        def pixel_cluster(cx: int, cy: int, radius: int, step: int = 6):
+            for y in range(-radius, radius + 1, step):
+                for x in range(-radius, radius + 1, step):
+                    if x * x + y * y <= radius * radius:
+                        pygame.draw.rect(self.image, col, pygame.Rect(cx + x - 2, cy + y - 2, 4, 4))
+
         if shape == "circle":
-            pygame.draw.circle(self.image, col, (c, c), max(10, c - 4))
+            pygame.draw.circle(self.image, col, (c, c), max(10, c - 4), 1)
+            pixel_cluster(c, c, max(10, c - 7))
         elif shape == "hex":
             pygame.draw.polygon(self.image, col, [(c, 4), (size - 8, c // 2), (size - 8, size - c // 2), (c, size - 4), (8, size - c // 2), (8, c // 2)])
+            pixel_cluster(c, c, max(8, c - 11))
         elif shape == "star":
             pts = [(c, 3), (c + 12, c - 8), (size - 4, c), (c + 12, c + 8), (c, size - 3), (c - 12, c + 8), (4, c), (c - 12, c - 8)]
             pygame.draw.polygon(self.image, col, pts)
+            pixel_cluster(c, c, max(8, c - 13), step=7)
         else:
             pygame.draw.polygon(self.image, col, [(c, 2), (size - 3, c), (c, size - 2), (3, c)])
+            pixel_cluster(c, c, max(8, c - 12), step=6)
 
     def _set_phase(self, new_phase: int):
         if new_phase != self.phase:
