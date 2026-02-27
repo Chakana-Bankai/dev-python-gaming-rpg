@@ -147,6 +147,8 @@ class GameplayScene(BaseScene):
             len(self.gm.enemies),
             self.gm.difficulty,
             sorted(self.gm.owned_powers),
+            self.gm.power_system.get_primary_active_power_name(self.gm.owned_powers),
+            self.gm.player.secondary_timer,
         )
 
         if self.gm.sm.is_state(GameState.LEVEL_UP):

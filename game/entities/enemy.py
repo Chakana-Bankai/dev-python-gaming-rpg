@@ -19,6 +19,7 @@ class Enemy(pygame.sprite.Sprite):
         self.speed = speed
         self.damage = damage
         self.phase = random.random() * 6.28
+        self.style = random.choice(["feral", "cautious", "erratic"])
 
         if self.kind == "rusher":
             self.image.fill((240, 120, 90))
@@ -53,5 +54,10 @@ class Enemy(pygame.sprite.Sprite):
             self.phase += dt * 2.5
             direction = (direction * (0.9 + 0.1 * abs(math.sin(self.phase)))).normalize()
 
+        if self.style == "cautious":
+            direction = (direction * 0.85 + Vector2(-direction.y, direction.x) * 0.15).normalize()
+        elif self.style == "erratic":
+            wob = Vector2(math.sin(self.phase * 1.7), math.cos(self.phase * 1.3)) * 0.25
+            direction = (direction + wob).normalize()
         self.pos += direction * self.speed * dt
         self.rect.center = (int(self.pos.x), int(self.pos.y))

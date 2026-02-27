@@ -110,3 +110,11 @@ class PowerSystem:
             if self.powers[name].active_effect(gm):
                 return True
         return False
+
+    def get_primary_active_power_name(self, owned: set[str]) -> str:
+        active_names = []
+        for name in owned:
+            power = self.powers.get(name)
+            if power and power.active_effect.__func__ is not Power.active_effect:
+                active_names.append(name)
+        return sorted(active_names)[0] if active_names else "Nova"

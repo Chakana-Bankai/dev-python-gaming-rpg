@@ -16,6 +16,8 @@ class HUD:
         enemies_alive: int,
         difficulty: int,
         powers: list[str],
+        secondary_label: str = "Nova",
+        secondary_cd: float = 0.0,
     ):
         # Top modern status bar
         bar_h = 76
@@ -45,6 +47,9 @@ class HUD:
         if powers:
             powers_txt = " · ".join(powers[:3])
             screen.blit(font.render(f"Poderes {powers_txt}", True, WHITE), (560, 46))
+
+        sec_state = "READY" if secondary_cd <= 0 else f"{secondary_cd:.1f}s"
+        screen.blit(font.render(f"2º {secondary_label}: {sec_state}", True, WHITE), (1220, 46))
 
         # Bottom center event banner for boss/text cues
         if message:

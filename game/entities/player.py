@@ -144,6 +144,11 @@ class Player(pygame.sprite.Sprite):
             dirs += [base.rotate(a) for a in (45, 135, -45, -135)]
         if "lattice" in self.weapon_modes:
             dirs += [base.rotate(a) for a in (-60, -30, 30, 60)]
+        if "prism" in self.weapon_modes:
+            dirs += [base.rotate(a) for a in (-75, -45, -15, 15, 45, 75)]
+        if "helix" in self.weapon_modes:
+            self._shot_phase = (self._shot_phase + 28) % 360
+            dirs += [base.rotate(self._shot_phase * 0.5), base.rotate(-self._shot_phase * 0.5)]
         # normalizar y deduplicar aproximada
         out = []
         for d in dirs:

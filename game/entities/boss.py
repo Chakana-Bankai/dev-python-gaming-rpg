@@ -1,4 +1,5 @@
 import math
+import random
 
 import pygame
 from pygame.math import Vector2
@@ -43,6 +44,7 @@ class Boss(Enemy):
         self.rect = self.image.get_rect(center=(int(pos.x), int(pos.y)))
         self.phase = 1
         self.impulse = Vector2()
+        self.style = random.choice(["hunter", "orbiter", "ripper"])
 
     def update(self, dt: float, player_pos: Vector2, geometry_context=None):
         ratio = self.hp / self.max_hp if self.max_hp else 0
@@ -81,11 +83,18 @@ class Boss(Enemy):
                     desired = player_pos + push_vec.normalize() * 90
                     steer += (desired - self.pos).normalize() * 0.8
 
+        if self.style == "orbiter":
+            steer += Vector2(-direction.y, direction.x) * 0.22
+        elif self.style == "ripper":
+            steer *= 1.12
+
         if steer.length_squared() > 0:
             steer = steer.normalize()
 
         self.impulse *= (1.0 - min(1.0, dt * 5.0))
-        self.pos += (steer * self.speed + self.impulse) * dt
+        self.pos = Vector2(self.pos) + (steer * self.speed + self.impulse) * dt
+        if not (math.isfinite(self.pos.x) and math.isfinite(self.pos.y)):
+            self.pos = Vector2(player_pos)
         self.rect.center = (int(self.pos.x), int(self.pos.y))
 
 
@@ -162,7 +171,9 @@ class OmegaBoss(Enemy):
             self.pos += mv * self.speed * 1.2 * dt
 
         self.impulse *= (1.0 - min(1.0, dt * 4.0))
-        self.pos += self.impulse * dt
+        self.pos = Vector2(self.pos) + self.impulse * dt
+        if not (math.isfinite(self.pos.x) and math.isfinite(self.pos.y)):
+            self.pos = Vector2(player_pos)
         self.rect.center = (int(self.pos.x), int(self.pos.y))
 
     def split_fragments(self):

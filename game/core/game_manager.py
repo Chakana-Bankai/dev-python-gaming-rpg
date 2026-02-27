@@ -120,6 +120,8 @@ class GameManager:
             ("Mode: Storm Crit", lambda: p.weapon_modes.add("storm_crit")),
             ("Mode: Sigil", lambda: p.weapon_modes.add("sigil")),
             ("Mode: Lattice", lambda: p.weapon_modes.add("lattice")),
+            ("Mode: Prism", lambda: p.weapon_modes.add("prism")),
+            ("Mode: Helix", lambda: p.weapon_modes.add("helix")),
         ]
         random.shuffle(stat_pool)
         self.card_options = stat_pool[:2]
@@ -478,6 +480,8 @@ class GameManager:
                     len(self.enemies),
                     self.difficulty,
                     sorted(self.owned_powers),
+                    self.power_system.get_primary_active_power_name(self.owned_powers),
+                    self.player.secondary_timer,
                 )
 
                 if self.sm.is_state(GameState.LEVEL_UP):
