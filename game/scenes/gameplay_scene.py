@@ -21,6 +21,21 @@ class GameplayScene(BaseScene):
             ctx["gm"] = self.gm
         self.room_timer = 0.0
         self.last_floating_count = 0
+        self.tutorial_t = 0.0
+        self.didactic_tips = [
+            "WASD moverte · Shift dash · Click izq disparo · Click der poder",
+            "Lee Fase Geo: cambia cómo rebotan y doblan los proyectiles",
+            "Puertas cambian el destino: combina símbolos para rutas secretas",
+            "En bosses, prioriza posicionamiento sobre DPS bruto",
+        ]
+
+        archetype = self.ctx["state"].run.active_archetype
+        if archetype == "Guerrero":
+            self.gm.player.image.fill((118, 168, 255))
+        elif archetype == "Testigo":
+            self.gm.player.image.fill((122, 230, 210))
+        elif archetype == "Sombra":
+            self.gm.player.image.fill((178, 128, 245))
 
     def _handle_level_up_input(self, key):
         options = list(self.gm.card_options)
@@ -75,6 +90,7 @@ class GameplayScene(BaseScene):
             self.gm._update_simulation(dt)
 
         self.ctx["camera"].set_boss_zoom(self.gm.sm.is_state(GameState.BOSS))
+        self.tutorial_t += dt
 
         if len(self.gm.floating_texts) > self.last_floating_count:
             self.ctx["particles"].spawn_impact(self.gm.player.pos)
@@ -165,6 +181,15 @@ class GameplayScene(BaseScene):
         geo_rect = geo_label.get_rect(center=(WIDTH // 2, HEIGHT - 22))
         pygame.draw.rect(screen, (8, 10, 16), geo_rect.inflate(18, 10), border_radius=7)
         screen.blit(geo_label, geo_rect)
+
+
+        tip_idx = int(self.tutorial_t // 6) % len(self.didactic_tips)
+        tip_text = self.didactic_tips[tip_idx]
+        tip = self.ctx["small"].render(f"✧ Guía: {tip_text}", True, (220, 226, 248))
+        tip_rect = pygame.Rect(22, HEIGHT - 72, tip.get_width() + 20, tip.get_height() + 10)
+        pygame.draw.rect(screen, (10, 12, 18), tip_rect, border_radius=7)
+        pygame.draw.rect(screen, (96, 118, 190), tip_rect, 1, border_radius=7)
+        screen.blit(tip, (tip_rect.x + 10, tip_rect.y + 5))
 
         meta = self.ctx["small"].render(
             f"◬ {str(self.ctx['state'].run.seed)[-5:]} · {self.ctx['state'].run.active_archetype} · λ {self.ctx['progression'].lucidez:.2f}",
