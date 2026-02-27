@@ -355,13 +355,27 @@ class GeometrySystem:
 
         g = self.active_gravity
         if g:
-            pygame.draw.circle(screen, (120, 90, 180), (int(g.center.x), int(g.center.y)), int(g.radius), 2)
+            gs = pygame.Surface((int(g.radius * 2) + 4, int(g.radius * 2) + 4), pygame.SRCALPHA)
+            pygame.draw.circle(gs, (120, 90, 180, 48), (int(g.radius) + 2, int(g.radius) + 2), int(g.radius))
+            screen.blit(gs, (int(g.center.x - g.radius - 2), int(g.center.y - g.radius - 2)))
+            pygame.draw.circle(screen, (148, 120, 220), (int(g.center.x), int(g.center.y)), int(g.radius), 2)
+            pygame.draw.circle(screen, (148, 120, 220), (int(g.center.x), int(g.center.y)), 4)
 
         for i, cl in enumerate(self.active_cutlines):
             jitter = random.uniform(-1.5, 1.5) if self.phase >= 2 else 0.0
             a = (cl.a.x + jitter, cl.a.y)
             b = (cl.b.x + jitter, cl.b.y)
-            pygame.draw.line(screen, (255, 130 + i * 20, 120), a, b, 3)
+            color = (255, 130 + i * 20, 120)
+            pygame.draw.line(screen, color, a, b, 3)
+            pygame.draw.circle(screen, color, (int(a[0]), int(a[1])), 5)
+            pygame.draw.circle(screen, color, (int(b[0]), int(b[1])), 5)
+
+        if self.transitioning:
+            tw = 280
+            tr = pygame.Rect(self.arena_bounds.centerx - tw // 2, self.arena_bounds.top - 22, tw, 10)
+            pygame.draw.rect(screen, (40, 44, 56), tr, border_radius=4)
+            progress = min(1.0, self.transition_t / max(0.001, self.transition_len))
+            pygame.draw.rect(screen, (120, 170, 230), (tr.x, tr.y, int(tw * progress), tr.h), border_radius=4)
 
     def get_context_for_boss(self):
         return {

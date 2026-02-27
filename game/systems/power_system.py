@@ -42,7 +42,7 @@ class InvertPower(Power):
 
 class EntropyPower(Power):
     def passive_effect(self, gm, dt: float):
-        gm.entropy_mult = min(1.6, 1.0 + gm.kill_streak * 0.02)
+        gm.entropy_mult = min(1.25, 1.0 + gm.kill_streak * 0.012)
 
 
 class StillnessCorePower(Power):
@@ -55,14 +55,15 @@ class StillnessCorePower(Power):
 
 class FractureShotPower(Power):
     def passive_effect(self, gm, dt: float):
-        if gm.time_since_last_shot > 2.0:
-            gm.player.pierce = max(gm.player.pierce, 2)
+        # bonus temporal de penetración tras pausa de fuego (no permanente)
+        if gm.time_since_last_shot > 1.4:
+            gm.player.pierce = max(gm.player.pierce, gm.base_player_pierce + 1)
 
 
 class LowLifeFuryPower(Power):
     def passive_effect(self, gm, dt: float):
         if gm.player.hp <= gm.player.max_hp * 0.30:
-            gm.player.damage = gm.base_player_damage * 1.35
+            gm.player.damage = gm.base_player_damage * 1.22
 
 
 class MirrorSkinPower(Power):

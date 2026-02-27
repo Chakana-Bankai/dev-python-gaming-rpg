@@ -79,6 +79,7 @@ class GameManager:
 
         self.base_player_damage = self.player.damage
         self.base_player_speed = self.player.speed
+        self.base_player_pierce = self.player.pierce
 
         self.time_since_last_shot = 0.0
         self.kill_streak = 0
@@ -203,10 +204,16 @@ class GameManager:
         self.base_player_damage = max(self.base_player_damage, self.player.damage)
         self.player.damage = self.base_player_damage
         self.player.speed = self.base_player_speed
+        self.player.pierce = self.base_player_pierce
         self.mirror_skin_chance = 0.0
         self.entropy_mult = 1.0
 
         self.power_system.apply_passives(self, dt)
+
+        # coherencia de daño: multiplica por entropía y limita picos extremos
+        target_damage = self.player.damage * self.entropy_mult
+        cap = self.base_player_damage * 2.1 + self.level * 1.2
+        self.player.damage = max(self.base_player_damage * 0.75, min(cap, target_damage))
 
         keys = pygame.key.get_pressed()
         invert = any(isinstance(e, Reflection) for e in self.enemies) or self.invert_timer > 0

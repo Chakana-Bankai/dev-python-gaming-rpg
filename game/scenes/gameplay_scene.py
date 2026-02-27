@@ -118,9 +118,19 @@ class GameplayScene(BaseScene):
         self.ctx["particles"].draw(screen)
 
         for d in self.gm.doors:
-            pygame.draw.rect(screen, d.color, d.rect)
+            pygame.draw.rect(screen, d.color, d.rect, border_radius=6)
+            pygame.draw.rect(screen, WHITE, d.rect, 2, border_radius=6)
             label = self.ctx["small"].render(d.type.value, True, WHITE)
-            screen.blit(label, label.get_rect(center=d.rect.center))
+            if d.rect.width < d.rect.height:
+                lx = d.rect.right + 12 if d.rect.centerx < WIDTH // 2 else d.rect.left - 12 - label.get_width()
+                ly = d.rect.centery - label.get_height() // 2
+            else:
+                lx = d.rect.centerx - label.get_width() // 2
+                ly = d.rect.bottom + 8
+            bubble = pygame.Rect(lx - 8, ly - 4, label.get_width() + 16, label.get_height() + 8)
+            pygame.draw.rect(screen, (12, 14, 22), bubble, border_radius=6)
+            pygame.draw.rect(screen, d.color, bubble, 1, border_radius=6)
+            screen.blit(label, (lx, ly))
 
         for ft in self.gm.floating_texts:
             txt = self.ctx["small"].render(ft.text, True, ft.color)
@@ -133,7 +143,7 @@ class GameplayScene(BaseScene):
             self.gm.level,
             self.gm.tension.tension_level,
             self.gm.profile.final_evaluation(),
-            f"Estado: {self.ctx['progression'].symbolic_state} | Seed: {self.ctx['state'].run.seed}",
+            self.gm.message,
             len(self.gm.enemies),
             self.gm.difficulty,
             sorted(self.gm.owned_powers),
@@ -144,9 +154,19 @@ class GameplayScene(BaseScene):
         elif self.gm.sm.is_state(GameState.PAUSED):
             self.gm.menus.draw_pause(screen, self.ctx["font"], self.ctx["small"])
 
+        geo = self.gm.geometry
+        geo_text = (
+            f"Fase Geo {geo.phase} | Reflectores {len(geo.active_reflectors)} | "
+            f"Gravedad {'ON' if geo.active_gravity else 'OFF'} | Cortes {len(geo.active_cutlines)}"
+        )
+        geo_label = self.ctx["small"].render(geo_text, True, (205, 216, 240))
+        geo_rect = geo_label.get_rect(center=(WIDTH // 2, HEIGHT - 22))
+        pygame.draw.rect(screen, (8, 10, 16), geo_rect.inflate(18, 10), border_radius=7)
+        screen.blit(geo_label, geo_rect)
+
         meta = self.ctx["small"].render(
-            f"Arquetipo: {self.ctx['state'].run.active_archetype}  Lucidez: {self.ctx['progression'].lucidez:.2f}",
+            f"Seed: {self.ctx['state'].run.seed}  Arquetipo: {self.ctx['state'].run.active_archetype}  Lucidez: {self.ctx['progression'].lucidez:.2f}",
             True,
             WHITE,
         )
-        screen.blit(meta, (20, 20))
+        screen.blit(meta, (WIDTH - meta.get_width() - 24, 20))
