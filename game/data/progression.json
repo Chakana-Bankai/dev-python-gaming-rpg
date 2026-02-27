@@ -1,12 +1,17 @@
 {
-  "runs_completed": 0,
+  "runs_completed": 2,
   "total_deaths": 0,
-  "rooms_played": 0,
-  "average_room_time": 0.0,
-  "unlocked_archetypes": ["Iniciado"],
+  "rooms_played": 5757,
+  "average_room_time": 0.0367147820045146,
+  "unlocked_archetypes": [
+    "Guerrero",
+    "Iniciado",
+    "Sombra",
+    "Testigo"
+  ],
   "archetype_unlocked": "Iniciado",
-  "consciousness_level": 0.0,
-  "lucidez": 0.0,
-  "last_seed": null,
-  "best_room_time": null
+  "consciousness_level": 0.36,
+  "lucidez": 0.48,
+  "last_seed": 328048,
+  "best_room_time": 0.016
 }
