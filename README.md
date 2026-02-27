@@ -81,3 +81,19 @@ game/
   Ahora el proyecto incluye SFX sintéticos (sin assets) para disparos, daño y aparición de bosses.
 - **¿Por qué algunos símbolos no se veían?**
   Era un tema de fuente/render de glifos, no de vectores. Se mejoró el fallback de fuente simbólica y se normalizaron algunos iconos.
+
+
+## Systems expansion
+
+- New procedural 8-bit audio module: `game/systems/audio_system.py`
+  - menu pulse loop
+  - gameplay BPM pulse loop
+  - final archetype stingers
+  - SFX (shoot/dash/damage/boss spawn)
+- New dynamic powers module: `game/systems/power_system.py`
+  - active + passive powers integrated into level-up cards and player loop
+- Omega final boss expanded to 3 phases in `game/entities/boss.py`
+  - Reflection
+  - Inversion
+  - Dual Manifestation
+- FINAL state now shows post-run archetype resolution with world distortion metrics.

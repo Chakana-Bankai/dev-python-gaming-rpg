@@ -15,8 +15,8 @@ class PsychologicalProfile:
 
     def register_hit_taken(self):
         self.hits_taken += 1
-        self.control_score -= 0.1
-        self.evasion_score -= 0.25
+        self.control_score -= 0.08
+        self.evasion_score -= 0.18
 
     def register_dash(self):
         self.dashes += 1
@@ -26,15 +26,19 @@ class PsychologicalProfile:
         self.rooms_cleared += 1
         self.control_score += 0.65
 
-    def final_evaluation(self) -> str:
-        # Evaluación más estable: combina scores + métricas de comportamiento.
+    def _composite(self):
         aggression = self.aggression_score + self.shots * 0.02
         control = self.control_score + self.rooms_cleared * 0.12 - self.hits_taken * 0.04
         evasion = self.evasion_score + self.dashes * 0.05 - self.hits_taken * 0.03
+        return aggression, control, evasion
 
-        top = max(aggression, control, evasion)
-        if top == control:
-            return "SAGE"
-        if top == aggression:
-            return "WARRIOR"
-        return "GHOST"
+    def final_evaluation(self) -> str:
+        aggression, control, evasion = self._composite()
+        # Archetype mapping requested
+        if aggression > control * 1.2 and aggression > evasion:
+            return "Duelist"
+        if control > aggression and control > evasion:
+            return "Oracle"
+        if evasion > aggression and evasion > control:
+            return "Colossus" if self.hits_taken < 4 else "Overlord"
+        return "Overlord"
