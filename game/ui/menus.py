@@ -25,6 +25,20 @@ class Menus:
         screen.blit(s2, s2.get_rect(center=(WIDTH // 2, HEIGHT // 2 + 28)))
         screen.blit(s3, s3.get_rect(center=(WIDTH // 2, HEIGHT // 2 + 50)))
 
+    def draw_pause_options(self, screen, font, small_font, selected: int, options: list[str]):
+        overlay = pygame.Surface((WIDTH, HEIGHT), pygame.SRCALPHA)
+        overlay.fill((0, 0, 0, 205))
+        screen.blit(overlay, (0, 0))
+        title = font.render("PAUSE / OPTIONS", True, WHITE)
+        screen.blit(title, title.get_rect(center=(WIDTH // 2, HEIGHT // 2 - 120)))
+        for i, opt in enumerate(options):
+            col = GREEN if i == selected else WHITE
+            prefix = ">" if i == selected else " "
+            txt = small_font.render(f"{prefix} {opt}", True, col)
+            screen.blit(txt, txt.get_rect(center=(WIDTH // 2, HEIGHT // 2 - 18 + i * 34)))
+        hint = small_font.render("↑/↓ navegar · ENTER aplicar · P volver", True, WHITE)
+        screen.blit(hint, hint.get_rect(center=(WIDTH // 2, HEIGHT // 2 + 120)))
+
     def draw_end(self, screen, font, small_font, title: str, body: str):
         overlay = pygame.Surface((WIDTH, HEIGHT), pygame.SRCALPHA)
         overlay.fill((0, 0, 0, 190))

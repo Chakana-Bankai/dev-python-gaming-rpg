@@ -18,6 +18,8 @@ class HUD:
         powers: list[str],
         secondary_label: str = "Nova",
         secondary_cd: float = 0.0,
+        weapon_label: str = "Pulse",
+        has_sacred_key: bool = False,
     ):
         # Top compact status bar
         bar_h = 64
@@ -39,10 +41,13 @@ class HUD:
 
         screen.blit(font.render(f"HP {int(player.hp)}/{int(player.max_hp)}", True, WHITE), (hp_x + hp_w + 12, 10))
         screen.blit(font.render(f"Lv {level_idx}", True, WHITE), (470, 10))
-        screen.blit(font.render(f"En {enemies_alive}", True, WHITE), (560, 10))
-        screen.blit(font.render(f"Ts {tension:.1f}", True, WHITE), (640, 10))
-        screen.blit(font.render(f"Df {difficulty}", True, WHITE), (730, 10))
-        screen.blit(font.render(f"Arq {profile}", True, BLUE), (820, 10))
+        screen.blit(font.render(f"En {enemies_alive}", True, WHITE), (550, 10))
+        screen.blit(font.render(f"Ts {tension:.1f}", True, WHITE), (630, 10))
+        screen.blit(font.render(f"Df {difficulty}", True, WHITE), (710, 10))
+        screen.blit(font.render(f"Arq {profile}", True, BLUE), (790, 10))
+        screen.blit(font.render(f"⚡ {weapon_label}", True, WHITE), (980, 10))
+        if has_sacred_key:
+            screen.blit(font.render("🗝", True, (247, 229, 138)), (1170, 10))
 
         if powers:
             powers_txt = " · ".join(powers[:2])

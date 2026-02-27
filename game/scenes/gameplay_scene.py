@@ -23,10 +23,10 @@ class GameplayScene(BaseScene):
         self.last_floating_count = 0
         self.tutorial_t = 0.0
         self.didactic_tips = [
-            "WASD mover · Shift dash · Click izq arma · Click der limpieza",
-            "Geo Fase cambia rebotes/cortes: mira el panel inferior",
-            "Puertas cercanas alteran bioma y ritmo de combate",
-            "Boss final muta por arquetipo: prioriza espacio y timing",
+            "⌂ Move: WASD · Dash: Shift",
+            "⚔ Shoot: LMB · Wipe: RMB",
+            "✦ Doors = riesgo o ritual",
+            "◈ Mira Bioma/Fase abajo",
         ]
 
         archetype = self.ctx["state"].run.active_archetype
@@ -59,6 +59,20 @@ class GameplayScene(BaseScene):
                 self.gm.sm.set(GameState.PAUSED)
             elif e.key == pygame.K_p and self.gm.sm.is_state(GameState.PAUSED):
                 self.gm.sm.set(GameState.RUNNING)
+
+            if self.gm.sm.is_state(GameState.PAUSED):
+                if e.key in (pygame.K_UP, pygame.K_w):
+                    self.gm.pause_selected = (self.gm.pause_selected - 1) % len(self.gm.pause_options)
+                elif e.key in (pygame.K_DOWN, pygame.K_s):
+                    self.gm.pause_selected = (self.gm.pause_selected + 1) % len(self.gm.pause_options)
+                elif e.key == pygame.K_RETURN:
+                    self.gm.apply_pause_option()
+
+            if self.gm.sm.is_state(GameState.DOOR_CHOICE):
+                if e.key in (pygame.K_1, pygame.K_KP1):
+                    self.gm.choose_door_decision(0)
+                elif e.key in (pygame.K_2, pygame.K_KP2):
+                    self.gm.choose_door_decision(1)
 
             if self.gm.sm.current in (GameState.RUNNING, GameState.BOSS) and e.key in (pygame.K_LSHIFT, pygame.K_RSHIFT):
                 self.gm.player.try_dash()
@@ -163,12 +177,26 @@ class GameplayScene(BaseScene):
             sorted(self.gm.owned_powers),
             self.gm.power_system.get_primary_active_power_name(self.gm.owned_powers),
             self.gm.player.secondary_timer,
+            self.gm._weapon_label(),
+            self.gm.sacred_key,
         )
 
         if self.gm.sm.is_state(GameState.LEVEL_UP):
             self.gm._draw_level_up_cards()
         elif self.gm.sm.is_state(GameState.PAUSED):
-            self.gm.menus.draw_pause(screen, self.ctx["font"], self.ctx["small"])
+            self.gm.menus.draw_pause_options(screen, self.ctx["font"], self.ctx["small"], self.gm.pause_selected, self.gm.pause_options)
+        elif self.gm.sm.is_state(GameState.DOOR_CHOICE):
+            overlay = pygame.Surface((WIDTH, HEIGHT), pygame.SRCALPHA)
+            overlay.fill((0, 0, 0, 180))
+            screen.blit(overlay, (0, 0))
+            title = self.ctx["font"].render("PORTAL DECISION", True, WHITE)
+            screen.blit(title, title.get_rect(center=(WIDTH // 2, HEIGHT // 2 - 100)))
+            for i, (txt, _) in enumerate(self.gm.door_decisions[:2], start=1):
+                label = self.ctx["small"].render(txt, True, (220, 230, 248))
+                r = pygame.Rect(WIDTH // 2 - 360, HEIGHT // 2 - 20 + (i - 1) * 52, 720, 40)
+                pygame.draw.rect(screen, (12, 16, 28), r, border_radius=8)
+                pygame.draw.rect(screen, (106, 132, 212), r, 2, border_radius=8)
+                screen.blit(label, label.get_rect(center=r.center))
 
         geo = self.gm.geometry
         geo_text = (

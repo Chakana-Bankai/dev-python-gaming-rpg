@@ -12,6 +12,7 @@ class DoorType(Enum):
     CONTEMPLATION = "[☾] Contemplation"
     SHADOW = "[∆] Shadow"
     ASCENT = "[✦] Ascent"
+    SACRED = "[✞] Sacred"
 
 
 @dataclass
@@ -26,12 +27,14 @@ class Door:
             DoorType.CONTEMPLATION: CYAN,
             DoorType.SHADOW: PURPLE,
             DoorType.ASCENT: GREEN,
+            DoorType.SACRED: (250, 236, 165),
         }[self.type]
 
 
 class DoorSystem:
-    def create_doors(self):
+    def create_doors(self, sacred_unlocked: bool = False):
         pool = list(DoorType)
+        pool.remove(DoorType.SACRED)
         random.shuffle(pool)
         # Puertas dentro de la arena jugable: visibles y alcanzables sin tocar bordes del mapa.
         w, h = 120, 26
@@ -43,7 +46,10 @@ class DoorSystem:
             pygame.Rect(side_x, center_y - w // 2, h, w),
             pygame.Rect(WIDTH - side_x - h, center_y - w // 2, h, w),
         ]
-        return [Door(rects[i], pool[i]) for i in range(3)]
+        doors = [Door(rects[i], pool[i]) for i in range(3)]
+        if sacred_unlocked:
+            doors.append(Door(pygame.Rect(WIDTH // 2 - w // 2, HEIGHT - top_y - h, w, h), DoorType.SACRED))
+        return doors
 
     def apply(self, door_type: DoorType, gm):
         if door_type == DoorType.CONFLICT:
@@ -58,6 +64,13 @@ class DoorSystem:
             gm.difficulty += 1
             gm.spawn_reflection_next = True
             return "∆ Sombra asumida: lo que niegas ahora aprende tu forma."
+        if door_type == DoorType.SACRED:
+            gm.difficulty += 3
+            gm.player.max_hp += 30
+            gm.player.hp = min(gm.player.max_hp, gm.player.hp + 30)
+            gm.base_player_damage += 5
+            gm.player.weapon_modes.add("prism")
+            return "✞ Umbral Sagrado: el Ángel juzga y te bendice con poder brutal."
         gm.difficulty = max(1, gm.difficulty - 1)
         gm.player.max_hp += 8
         gm.player.hp = min(gm.player.max_hp, gm.player.hp + 8)

@@ -18,6 +18,8 @@ class AudioSystem:
         self.sfx_channel = None
         self._cache = {}
         self._tension_active = False
+        self.muted = False
+        self.mix_gain = 1.0
         try:
             if not pygame.mixer.get_init():
                 pygame.mixer.init(frequency=self.sample_rate, size=-16, channels=1, buffer=512)
@@ -121,7 +123,7 @@ class AudioSystem:
         return pygame.mixer.Sound(buffer=(audio * 32767).astype(np.int16))
 
     def play_sfx(self, name: str):
-        if self.enabled and name in self.sfx:
+        if self.enabled and not self.muted and name in self.sfx:
             self.sfx_channel.play(self.sfx[name])
 
     def play_music(self, name: str):
@@ -130,10 +132,10 @@ class AudioSystem:
         self.stop_music()
         if name == "menu":
             self.music_channel.play(self.menu_loop, loops=-1)
-            self.music_channel.set_volume(0.22)
+            self.music_channel.set_volume(0.22 * self.mix_gain)
         elif name == "gameplay":
             self.music_channel.play(random.choice(self.ambient_variants), loops=-1)
-            self.music_channel.set_volume(0.2)
+            self.music_channel.set_volume(0.2 * self.mix_gain)
             self.tension_channel.play(self.tension_loop, loops=-1)
             self.tension_channel.set_volume(0.0)
 
@@ -142,14 +144,24 @@ class AudioSystem:
             return
         target = 0.16 if tension_level > 0.6 else 0.0
         current = self.tension_channel.get_volume()
-        self.tension_channel.set_volume(current + (target - current) * 0.05)
+        self.tension_channel.set_volume((current + (target - current) * 0.05) * self.mix_gain)
 
         if boss_hp_ratio is not None and boss_hp_ratio <= 0.1:
-            self.music_channel.set_volume(0.12)
+            self.music_channel.set_volume(0.12 * self.mix_gain)
             self.overlay_channel.play(self.final_overlay, loops=-1)
-            self.overlay_channel.set_volume(0.14)
+            self.overlay_channel.set_volume(0.14 * self.mix_gain)
         else:
             self.overlay_channel.stop()
+
+    def set_muted(self, muted: bool):
+        self.muted = muted
+        if not self.enabled:
+            return
+        if muted:
+            self.stop_music()
+
+    def set_mix_gain(self, gain: float):
+        self.mix_gain = max(0.0, min(1.0, gain))
 
     def stop_music(self):
         if self.enabled:

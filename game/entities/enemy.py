@@ -20,6 +20,7 @@ class Enemy(pygame.sprite.Sprite):
         self.damage = damage
         self.phase = random.random() * 6.28
         self.style = random.choice(["feral", "cautious", "erratic"])
+        self.elite = False
 
         if self.kind == "rusher":
             self._draw_shape((240, 120, 90), "triangle")
@@ -32,6 +33,22 @@ class Enemy(pygame.sprite.Sprite):
             self.damage *= 1.15
         else:
             self._draw_shape((220, 78, 96), "circle")
+
+    def promote_elite(self, rank: str = "elite"):
+        self.elite = True
+        if rank == "chaos":
+            self.hp *= 3.2
+            self.max_hp *= 3.2
+            self.speed *= 1.35
+            self.damage *= 1.85
+            self.style = "erratic"
+            self._draw_shape((255, 214, 92), "hex")
+        else:
+            self.hp *= 1.9
+            self.max_hp *= 1.9
+            self.speed *= 1.15
+            self.damage *= 1.45
+            self._draw_shape((255, 138, 96), "triangle")
 
     def _draw_shape(self, color: tuple[int, int, int], shape: str):
         self.image.fill((0, 0, 0, 0))

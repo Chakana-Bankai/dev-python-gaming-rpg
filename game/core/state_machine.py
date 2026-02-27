@@ -7,6 +7,7 @@ class GameState(Enum):
     LEVEL_UP = auto()
     BOSS = auto()
     PAUSED = auto()
+    DOOR_CHOICE = auto()
     FINAL = auto()
     GAME_OVER = auto()
 

@@ -72,6 +72,12 @@ class GameManager:
         self.spawn_reflection_next = False
         self.door_history: list[str] = []
         self.secret_unlocked = False
+        self.sacred_key = False
+        self.spawn_angel_next = False
+        self.pending_door = None
+        self.door_decisions = []
+        self.pause_options = ["Resume", "Audio: ON", "Music Vol +", "Music Vol -", "Restart Run", "Quit"]
+        self.pause_selected = 0
         self.damage_taken = 0.0
         self.consecutive_hits = 0
         self.focus_accumulator = Vector2(self.player.pos)
@@ -99,6 +105,34 @@ class GameManager:
         self.spiritual_symbols = ["✦", "☾", "∆", "☉", "⚚"]
 
         self.final_freeze_timer = 0.0
+
+    def _weapon_label(self) -> str:
+        if not self.player.weapon_modes:
+            return "Pulse"
+        priority = ["helix", "prism", "sigil", "chaos", "triple", "fan_shot", "cross_shot", "spiral"]
+        for mode in priority:
+            if mode in self.player.weapon_modes:
+                return mode.replace("_", " ").title()
+        return sorted(self.player.weapon_modes)[0].replace("_", " ").title()
+
+    def apply_pause_option(self):
+        choice = self.pause_options[self.pause_selected]
+        if choice.startswith("Resume"):
+            self.sm.set(GameState.RUNNING)
+        elif choice.startswith("Audio"):
+            mute = "ON" in choice
+            self.audio.set_muted(mute)
+            self.pause_options[1] = "Audio: OFF" if mute else "Audio: ON"
+            if not mute:
+                self.audio.play_music("gameplay")
+        elif choice.startswith("Music Vol +"):
+            self.audio.set_mix_gain(self.audio.mix_gain + 0.1)
+        elif choice.startswith("Music Vol -"):
+            self.audio.set_mix_gain(self.audio.mix_gain - 0.1)
+        elif choice.startswith("Restart"):
+            self._reset_to_menu()
+        elif choice.startswith("Quit"):
+            pygame.event.post(pygame.event.Event(pygame.QUIT))
 
         self._spawn_level()
         self.sm.set(GameState.MENU)
@@ -171,6 +205,21 @@ class GameManager:
             self.audio.play_music("gameplay")
             return
 
+        if self.spawn_angel_next:
+            self.spawn_angel_next = False
+            self.sm.set(GameState.BOSS)
+            self.audio.play_sfx("boss_spawn")
+            angel = Boss(Vector2(WIDTH // 2, 120), self.level + 2, player=self.player)
+            angel.kind = "Angelus"
+            angel.image.fill((245, 238, 170))
+            angel.damage *= 1.18
+            angel.speed *= 1.12
+            self.enemies.add(angel)
+            self.all_sprites.add(angel)
+            self.message = "✞ ANGELUS desciende: juicio sagrado activado."
+            self.audio.play_music("gameplay")
+            return
+
         self.sm.set(GameState.RUNNING)
         count = min(34, 8 + self.difficulty + random.randint(2, 8))
         for _ in range(count):
@@ -178,6 +227,11 @@ class GameManager:
             kind_roll = random.random()
             kind = "chaser" if kind_roll < 0.45 else "rusher" if kind_roll < 0.78 else "tank"
             e = Enemy(p, 20 + self.difficulty * 2.8, 92 + self.difficulty * 4, 9 + self.difficulty, kind=kind)
+            if random.random() < min(0.26, 0.06 + self.level * 0.02):
+                e.promote_elite("elite")
+            if random.random() < min(0.10, 0.015 * self.level):
+                e.promote_elite("chaos")
+                self.message = "☣ Enemigo caótico detectado"
             self.enemies.add(e)
             self.all_sprites.add(e)
         if random.random() < 0.42:
@@ -204,6 +258,47 @@ class GameManager:
             return
         self.level += 1
         self._spawn_level()
+
+    def _build_door_decisions(self, door):
+        def risk_path():
+            self.difficulty += 2
+            self.base_player_damage += 1.5
+            self.player.hp = min(self.player.max_hp, self.player.hp + 10)
+            self.geometry.set_fragmentation(True)
+
+        def ritual_path():
+            self.difficulty = max(1, self.difficulty - 1)
+            self.player.fire_cd = max(0.07, self.player.fire_cd * 0.9)
+            self.player.crit_bonus += 0.04
+            self.geometry.set_fragmentation(door.type.name in ("SHADOW", "SACRED"))
+
+        return [
+            ("1) Desafiar (+dificultad, +daño, bioma fracturado)", risk_path),
+            ("2) Ritual (+cadencia, +crit, atmósfera estable)", ritual_path),
+        ]
+
+    def choose_door_decision(self, idx: int):
+        if self.pending_door is None or idx >= len(self.door_decisions):
+            return
+        self.door_decisions[idx][1]()
+        d = self.pending_door
+        self.pending_door = None
+        self.message = self.door_system.apply(d.type, self)
+        self.geometry.set_door_theme(d.type.name)
+        self.door_history.append(d.type.name)
+        if len(self.door_history) > 5:
+            self.door_history = self.door_history[-5:]
+        if self.door_history[-3:] == ["SHADOW", "CONFLICT", "ASCENT"] and not self.secret_unlocked:
+            self.secret_unlocked = True
+            self.sacred_key = True
+            self.message = "🗝 Llave Sagrada obtenida: se revelará un umbral inferior."
+            self.difficulty += 2
+            self.player.max_hp += 20
+            self.player.hp = min(self.player.max_hp, self.player.hp + 20)
+        if d.type.name == "SACRED":
+            self.spawn_angel_next = True
+        self.sm.set(GameState.RUNNING)
+        self._advance()
 
     def _reset_to_menu(self):
         self.__init__(self.screen, audio=self.audio)
@@ -310,7 +405,7 @@ class GameManager:
 
         for relic in pygame.sprite.spritecollide(self.player, self.pickups, dokill=True):
             bonus = relic.apply(self)
-            self.message = f"◆ Reliquia {relic.name}: {bonus}"
+            self.message = f"◆ Reliquia {relic.name} [{relic.rarity.upper()}]: {bonus}"
             self.floating_texts.append(FloatingText(f"{relic.name}", Vector2(self.player.rect.center), (140, 240, 220)))
 
         for e in pygame.sprite.spritecollide(self.player, self.enemies, False):
@@ -332,24 +427,15 @@ class GameManager:
             self.consecutive_hits = 0
 
         if len(self.enemies) == 0 and not self.doors:
-            self.doors = self.door_system.create_doors()
+            self.doors = self.door_system.create_doors(sacred_unlocked=self.sacred_key)
             self.kill_streak = 0
 
         if self.door_lock_timer <= 0:
             for d in self.doors:
                 if self.player.rect.colliderect(d.rect):
-                    self.message = self.door_system.apply(d.type, self)
-                    self.geometry.set_door_theme(d.type.name)
-                    self.door_history.append(d.type.name)
-                    if len(self.door_history) > 5:
-                        self.door_history = self.door_history[-5:]
-                    if self.door_history[-3:] == ["SHADOW", "CONFLICT", "ASCENT"] and not self.secret_unlocked:
-                        self.secret_unlocked = True
-                        self.message = "✶ RUTA OCULTA: La sala recuerda tus tres símbolos." 
-                        self.difficulty += 2
-                        self.player.max_hp += 20
-                        self.player.hp = min(self.player.max_hp, self.player.hp + 20)
-                    self._advance()
+                    self.pending_door = d
+                    self.door_decisions = self._build_door_decisions(d)
+                    self.sm.set(GameState.DOOR_CHOICE)
                     break
 
         self.tension.update(self.player.shots_fired, self.damage_taken, len(self.enemies), dt)
@@ -507,6 +593,8 @@ class GameManager:
                     sorted(self.owned_powers),
                     self.power_system.get_primary_active_power_name(self.owned_powers),
                     self.player.secondary_timer,
+                    self._weapon_label(),
+                    self.sacred_key,
                 )
 
                 if self.sm.is_state(GameState.LEVEL_UP):

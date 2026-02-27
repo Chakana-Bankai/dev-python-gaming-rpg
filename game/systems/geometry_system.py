@@ -121,6 +121,8 @@ class GeometrySystem:
         self._last_gravity_entries: set[int] = set()
         self._hash: dict[tuple[int, int], list[tuple[str, object]]] = {}
         self.biome_name = "Antechamber"
+        self.fragmentation_mode = False
+        self.fragment_timer = 0.0
 
         self.apply_phase_config(self.phase_configs[1], Vector2(WIDTH // 2, HEIGHT // 2), instant=True)
 
@@ -183,6 +185,11 @@ class GeometrySystem:
                 )
 
         self.apply_phase_config(self.phase_configs[1], Vector2(WIDTH // 2, HEIGHT // 2), instant=True)
+
+    def set_fragmentation(self, enabled: bool):
+        self.fragmentation_mode = enabled
+        if enabled:
+            self.fragment_timer = 0.0
 
     @property
     def active_reflectors(self):
@@ -311,7 +318,19 @@ class GeometrySystem:
     ):
         self.micro_adjust_cd = max(0.0, self.micro_adjust_cd - dt)
         self.visual_pulse = max(0.0, self.visual_pulse - dt * 1.5)
+        self.fragment_timer += dt
         distortion = world_state.get("permanent_distortion_level", 0.0)
+
+        if self.fragmentation_mode and self.fragment_timer >= 2.8 and not self.transitioning:
+            self.fragment_timer = 0.0
+            if self.active_cutlines:
+                cl = random.choice(self.active_cutlines)
+                shift = Vector2(random.uniform(-60, 60), random.uniform(-60, 60))
+                cl.a += shift
+                cl.b -= shift
+            if self.active_gravity:
+                self.active_gravity.radius = max(70, min(170, self.active_gravity.radius + random.uniform(-20, 26)))
+            self.visual_pulse = 1.0
 
         if self.transitioning:
             self.transition_t += dt
@@ -374,6 +393,8 @@ class GeometrySystem:
                         prev = getattr(proj, "prev_pos", proj.pos)
                         if self._segment_intersection(prev, proj.pos, cl.a, cl.b):
                             proj.dir = proj.dir.rotate(90)
+                            if self.fragmentation_mode:
+                                proj.damage *= 1.08
                     elif typ == "reflector":
                         tr = obj
                         if tr.aabb().collidepoint(proj.pos.x, proj.pos.y):
@@ -384,6 +405,9 @@ class GeometrySystem:
             for cl in self.active_cutlines:
                 if self._segment_intersection(getattr(player, "prev_pos", player.pos), player.pos, cl.a, cl.b) and player.dash_timer > 0:
                     on_player_cutline_damage(8)
+
+        if self.fragmentation_mode and boss is not None and random.random() < dt * 0.35:
+            self.visual_pulse = max(self.visual_pulse, 0.4)
 
         for pid in in_gravity_ids - self._last_gravity_entries:
             audio.play_sfx("gravity_enter")

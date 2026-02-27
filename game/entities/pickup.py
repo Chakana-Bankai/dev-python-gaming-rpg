@@ -10,16 +10,16 @@ class RelicPickup(pygame.sprite.Sprite):
     """Objeto raro simple para enriquecer la run sin assets externos."""
 
     RELICS = [
-        ("Blood Prism", (245, 94, 112), "diamond"),
-        ("Moon Shell", (126, 220, 244), "circle"),
-        ("Kinetic Core", (242, 184, 84), "hex"),
-        ("Ricochet Idol", (164, 126, 242), "diamond"),
-        ("Void Bloom", (126, 244, 196), "circle"),
+        ("Blood Prism", "common", (245, 94, 112), "diamond"),
+        ("Moon Shell", "common", (126, 220, 244), "circle"),
+        ("Kinetic Core", "rare", (242, 184, 84), "hex"),
+        ("Ricochet Idol", "rare", (164, 126, 242), "diamond"),
+        ("Void Bloom", "extreme", (126, 244, 196), "circle"),
     ]
 
     def __init__(self, pos: Vector2):
         super().__init__()
-        self.name, self.color, shape = random.choice(self.RELICS)
+        self.name, self.rarity, self.color, shape = random.choice(self.RELICS)
         self.image = pygame.Surface((24, 24), pygame.SRCALPHA)
         if shape == "circle":
             pygame.draw.circle(self.image, self.color, (12, 12), 9)
@@ -48,6 +48,8 @@ class RelicPickup(pygame.sprite.Sprite):
             p.bounce += 1
             gm.base_player_pierce += 1
             return "+rebote + perforación"
-        p.secondary_cd = max(5.5, p.secondary_cd - 0.8)
-        p.weapon_modes.add("nova_plus")
-        return "secundario más fuerte"
+        # Extreme relic altera el mapa + estilo de juego.
+        p.secondary_cd = max(4.8, p.secondary_cd - 1.4)
+        p.weapon_modes.update({"nova_plus", "chaos"})
+        gm.geometry.set_fragmentation(True)
+        return "metamorfosis extrema del mapa"
