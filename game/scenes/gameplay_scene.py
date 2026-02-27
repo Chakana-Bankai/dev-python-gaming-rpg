@@ -141,6 +141,17 @@ class GameplayScene(BaseScene):
             pygame.draw.line(screen, GRID, (0, y), (WIDTH, y), 1)
 
         self.gm._draw_spiritual_overlays()
+        if self.gm.sm.is_state(GameState.BOSS) and any(type(e).__name__ == "OmegaBoss" for e in self.gm.enemies):
+            # Capa visual extraordinaria pseudo-3D para la pelea final.
+            t = pygame.time.get_ticks() * 0.001
+            for i in range(7):
+                k = i * 38
+                col = (55 + i * 18, 34 + i * 12, 80 + i * 20)
+                pygame.draw.rect(screen, col, pygame.Rect(80 + k, 90 + int(k * 0.34), WIDTH - 160 - k * 2, HEIGHT - 180 - int(k * 0.65)), 1)
+            ring_r = 190 + int(18 * pygame.math.Vector2(1, 0).rotate(t * 38).x)
+            pygame.draw.circle(screen, (128, 90, 210), (WIDTH // 2, HEIGHT // 2), max(80, ring_r), 2)
+            pygame.draw.circle(screen, (182, 120, 255), (WIDTH // 2, HEIGHT // 2), max(60, ring_r - 34), 1)
+
         self.gm.geometry.draw(screen)
         self.gm.all_sprites.draw(screen)
         self.ctx["particles"].draw(screen)
@@ -212,7 +223,7 @@ class GameplayScene(BaseScene):
         tip_idx = int(self.tutorial_t // 6) % len(self.didactic_tips)
         tip_text = self.didactic_tips[tip_idx]
         tip = self.ctx["small"].render(f"✧ {tip_text}", True, (220, 226, 248))
-        tip_rect = pygame.Rect(WIDTH - tip.get_width() - 44, HEIGHT - 76, tip.get_width() + 20, tip.get_height() + 10)
+        tip_rect = pygame.Rect(WIDTH - tip.get_width() - 36, HEIGHT - 58, tip.get_width() + 16, tip.get_height() + 8)
         pygame.draw.rect(screen, (10, 12, 18), tip_rect, border_radius=7)
         pygame.draw.rect(screen, (96, 118, 190), tip_rect, 1, border_radius=7)
         screen.blit(tip, (tip_rect.x + 10, tip_rect.y + 5))
@@ -223,3 +234,9 @@ class GameplayScene(BaseScene):
             WHITE,
         )
         screen.blit(meta, (WIDTH - meta.get_width() - 24, 12))
+
+        if not self.gm.sacred_key:
+            hint = self.ctx["small"].render("🗝 Ruta: SHADOW → CONFLICT → ASCENT", True, (246, 230, 148))
+            hrect = hint.get_rect(center=(WIDTH // 2, 86))
+            pygame.draw.rect(screen, (20, 18, 10), hrect.inflate(16, 10), border_radius=6)
+            screen.blit(hint, hrect)

@@ -105,6 +105,11 @@ class GameManager:
         self.spiritual_symbols = ["✦", "☾", "∆", "☉", "⚚"]
 
         self.final_freeze_timer = 0.0
+        self.omega_fx_timer = 0.0
+
+        self._spawn_level()
+        self.sm.set(GameState.MENU)
+        self.audio.play_music("menu")
 
     def _weapon_label(self) -> str:
         if not self.player.weapon_modes:
@@ -133,10 +138,6 @@ class GameManager:
             self._reset_to_menu()
         elif choice.startswith("Quit"):
             pygame.event.post(pygame.event.Event(pygame.QUIT))
-
-        self._spawn_level()
-        self.sm.set(GameState.MENU)
-        self.audio.play_music("menu")
 
     def _roll_cards(self):
         p = self.player
@@ -295,6 +296,21 @@ class GameManager:
             self.difficulty += 2
             self.player.max_hp += 20
             self.player.hp = min(self.player.max_hp, self.player.hp + 20)
+        elif not self.secret_unlocked:
+            target = ["SHADOW", "CONFLICT", "ASCENT"]
+            matched = 0
+            recent = self.door_history[-3:]
+            for i, name in enumerate(recent):
+                if i < len(target) and name == target[i]:
+                    matched += 1
+                else:
+                    break
+            hints = {
+                0: "✧ Hint del Santuario: inicia con SHADOW.",
+                1: "✧ Hint del Santuario: ahora elige CONFLICT.",
+                2: "✧ Hint del Santuario: termina con ASCENT para forjar la llave.",
+            }
+            self.message = hints.get(matched, self.message)
         if d.type.name == "SACRED":
             self.spawn_angel_next = True
         self.sm.set(GameState.RUNNING)
@@ -320,6 +336,7 @@ class GameManager:
 
     def _update_simulation(self, dt: float):
         self._update_power_timers(dt)
+        self.omega_fx_timer = max(0.0, self.omega_fx_timer - dt)
         self.door_lock_timer = max(0.0, self.door_lock_timer - dt)
 
         # reset derived base every frame before passive powers
@@ -350,6 +367,14 @@ class GameManager:
             hp_ratio = boss_ref.hp / boss_ref.max_hp if boss_ref.max_hp else 0
             if self.geometry.request_phase_from_boss(hp_ratio):
                 self.audio.play_sfx("geom_phase_shift")
+            if isinstance(boss_ref, OmegaBoss):
+                # Alianza ambiente-boss: el bioma entra en resonancia con Omega.
+                self.geometry.set_fragmentation(True)
+                self.tension.tension_level = min(10.0, self.tension.tension_level + dt * 0.25)
+                if self.omega_fx_timer <= 0:
+                    self.omega_fx_timer = 1.35
+                    self.audio.play_sfx("omega_pulse")
+                    self.floating_texts.append(FloatingText("Ω Resonancia", Vector2(self.player.rect.centerx, self.player.rect.centery - 48), (236, 134, 255)))
 
         for e in list(self.enemies):
             if isinstance(e, OmegaBoss):
@@ -429,6 +454,8 @@ class GameManager:
         if len(self.enemies) == 0 and not self.doors:
             self.doors = self.door_system.create_doors(sacred_unlocked=self.sacred_key)
             self.kill_streak = 0
+            if self.sacred_key:
+                self.message = "🗝 La llave vibra: la puerta inferior sagrada está disponible."
 
         if self.door_lock_timer <= 0:
             for d in self.doors:

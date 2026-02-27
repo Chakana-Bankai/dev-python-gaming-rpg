@@ -70,6 +70,7 @@ class AudioSystem:
             "reflect_boss": self._metal(760, 0.09, 0.24),
             "gravity_enter": self._tone(130, 0.09, 0.16, drift=4),
             "level_up": self._tone(640, 0.16, 0.26, drift=18),
+            "omega_pulse": self._metal(118, 0.22, 0.34),
         }
 
         self.final_sounds = {
