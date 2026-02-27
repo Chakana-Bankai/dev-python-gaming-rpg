@@ -1,7 +1,7 @@
 from pathlib import Path
 
-WIDTH = 960
-HEIGHT = 540
+WIDTH = 1920
+HEIGHT = 1080
 FPS = 60
 MAX_LEVELS = 8
 

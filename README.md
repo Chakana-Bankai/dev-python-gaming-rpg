@@ -50,6 +50,8 @@ game/
 - **Visual minimalista mejorado**: partículas ligeras, cámara dinámica (shake/nudge/zoom boss) y paletas simbólicas.
 - **Bucle evolutivo**: cada ciclo aumenta lucidez y transforma la experiencia sin romper rendimiento.
 
+- **Presentación visual reforzada**: resolución base FHD (1920x1080), textos más grandes y pantalla final negra con resumen persistente.
+
 ## Notas
 
 El `GameManager` original se mantiene como núcleo de combate para preservar compatibilidad, ahora orquestado por el sistema de escenas.

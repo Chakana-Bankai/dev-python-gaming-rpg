@@ -42,8 +42,8 @@ def main():
 
     ctx = {
         "screen": screen,
-        "font": pygame.font.SysFont("consolas", 26),
-        "small": pygame.font.SysFont("consolas", 16),
+        "font": pygame.font.SysFont("consolas", 42),
+        "small": pygame.font.SysFont("consolas", 24),
         "audio": audio,
         "save": save,
         "state": state,
