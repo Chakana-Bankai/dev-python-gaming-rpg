@@ -120,6 +120,67 @@ class GeometrySystem:
         self.visual_pulse = 0.0
         self._last_gravity_entries: set[int] = set()
         self._hash: dict[tuple[int, int], list[tuple[str, object]]] = {}
+        self.biome_name = "Antechamber"
+
+        self.apply_phase_config(self.phase_configs[1], Vector2(WIDTH // 2, HEIGHT // 2), instant=True)
+
+    def randomize_biome(self, level: int, difficulty: int, last_door: str | None):
+        """Varia geometría base por sala para evitar repetición de bioma."""
+        biome = random.choice(["Cathedral", "Forge", "Labyrinth", "Sanctum"])
+        if last_door == "SHADOW":
+            biome = random.choice(["Labyrinth", "Cathedral"])
+        elif last_door == "CONFLICT":
+            biome = random.choice(["Forge", "Labyrinth"])
+        elif last_door == "ASCENT":
+            biome = random.choice(["Sanctum", "Cathedral"])
+        self.biome_name = biome
+
+        cx, cy = WIDTH / 2, HEIGHT / 2
+        jitter = min(90, 35 + level * 3 + difficulty * 2)
+
+        if biome == "Forge":
+            self.phase_configs[1] = PhaseConfig(
+                reflectors=[{"center": Vector2(cx - 170, cy - 70), "rotation": 16}],
+                gravity_zone=None,
+                cut_lines=[{"a": Vector2(cx - 260, cy - 180), "b": Vector2(cx + 230, cy + 120)}],
+                global_rotation_speed=14,
+            )
+            self.phase_configs[2].gravity_zone = {"center": Vector2(cx + 35, cy), "radius": 128, "slow_pct": 0.30}
+        elif biome == "Labyrinth":
+            self.phase_configs[1] = PhaseConfig(
+                reflectors=[{"center": Vector2(cx - 230, cy), "rotation": 0}, {"center": Vector2(cx + 230, cy), "rotation": 180}],
+                gravity_zone=None,
+                cut_lines=[{"a": Vector2(cx - 80, cy - 220), "b": Vector2(cx - 80, cy + 220)}],
+            )
+            self.phase_configs[2].cut_lines = [
+                {"a": Vector2(cx - 260, cy - 120), "b": Vector2(cx + 120, cy - 120)},
+                {"a": Vector2(cx - 120, cy + 120), "b": Vector2(cx + 260, cy + 120)},
+            ]
+        elif biome == "Sanctum":
+            self.phase_configs[1] = PhaseConfig(
+                reflectors=[{"center": Vector2(cx, cy - 180), "rotation": 0}],
+                gravity_zone={"center": Vector2(cx, cy), "radius": 110, "slow_pct": 0.24},
+                cut_lines=[],
+            )
+            self.phase_configs[2].reflectors = [
+                {"center": Vector2(cx - 190, cy), "rotation": 28},
+                {"center": Vector2(cx + 190, cy), "rotation": 208},
+            ]
+        else:  # Cathedral
+            self.phase_configs[1] = PhaseConfig(
+                reflectors=[{"center": Vector2(cx - 160, cy - 110), "rotation": 24}],
+                gravity_zone=None,
+                cut_lines=[{"a": Vector2(cx + 70, cy - 220), "b": Vector2(cx + 70, cy + 220)}],
+            )
+            self.phase_configs[2].gravity_zone = {"center": Vector2(cx, cy + 40), "radius": 124, "slow_pct": 0.31}
+
+        # Pequeña variación procedural por sala.
+        for cfg in self.phase_configs.values():
+            for ref in cfg.reflectors:
+                ref["center"] = Vector2(
+                    max(self.arena_bounds.left + 80, min(self.arena_bounds.right - 80, ref["center"].x + random.uniform(-jitter, jitter))),
+                    max(self.arena_bounds.top + 80, min(self.arena_bounds.bottom - 80, ref["center"].y + random.uniform(-jitter, jitter))),
+                )
 
         self.apply_phase_config(self.phase_configs[1], Vector2(WIDTH // 2, HEIGHT // 2), instant=True)
 
@@ -361,6 +422,9 @@ class GeometrySystem:
         elif door_name == "ASCENT":
             self.phase_configs[1].reflectors = [{"center": Vector2(260, 250), "rotation": 0}, {"center": Vector2(620, 250), "rotation": 180}]
             self.phase_configs[2].reflectors = [{"center": Vector2(220, 220), "rotation": 25}, {"center": Vector2(680, 330), "rotation": 210}]
+
+        # Aplicación inmediata para que el cambio de puerta sea legible en la sala actual.
+        self.apply_phase_config(self.phase_configs[self.phase], Vector2(WIDTH // 2, HEIGHT // 2), instant=True)
 
     def draw(self, screen):
         pygame.draw.rect(screen, (60, 80, 110), self.arena_bounds, 2)

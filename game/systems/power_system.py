@@ -111,6 +111,31 @@ class PowerSystem:
                 return True
         return False
 
+    def activate_primary_owned(self, gm):
+        if not gm.owned_powers:
+            return False
+        ordered = sorted(gm.owned_powers)
+        for name in ordered:
+            power = self.powers.get(name)
+            if power and power.active_effect(gm):
+                return True
+        return False
+
+    def describe(self, name: str) -> str:
+        descriptions = {
+            "Echo": "repite el último disparo",
+            "RiftDash": "dash deja rastro dañino",
+            "SilenceField": "anula disparos enemigos en área",
+            "Invert": "controles invertidos, daño x2 breve",
+            "Entropy": "aumenta ritmo por racha",
+            "StillnessCore": "más daño si no disparas",
+            "FractureShot": "perfora tras silencio",
+            "LowLifeFury": "furia con HP bajo",
+            "MirrorSkin": "chance de reflejar daño",
+            "MomentumDrive": "velocidad por kill streak",
+        }
+        return descriptions.get(name, "efecto adaptable")
+
     def get_primary_active_power_name(self, owned: set[str]) -> str:
         active_names = []
         for name in owned:

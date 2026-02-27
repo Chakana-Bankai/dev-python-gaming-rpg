@@ -131,6 +131,7 @@ class OmegaBoss(Enemy):
 
     def __init__(self, pos: Vector2, difficulty: int):
         super().__init__(pos, hp=1100 + difficulty * 160, speed=124 + difficulty * 7, damage=30 + difficulty * 1.5, kind="omega")
+        self.variant = random.choice(["Abyss Prism", "Null Seraph", "Iron Eclipse", "Velvet Singularity"])
         self.phase = 1
         self.timer = 0.0
         self.arena_shrink = 0.0
@@ -140,15 +141,27 @@ class OmegaBoss(Enemy):
         self.rect = self.image.get_rect(center=(int(pos.x), int(pos.y)))
 
     def _apply_phase_visual(self):
-        phase_style = {
-            1: (76, (235, 88, 140)),
-            2: (84, (196, 76, 210)),
-            3: (90, (120, 208, 236)),
-            4: (98, (248, 120, 88)),
+        variant_style = {
+            "Abyss Prism": [(76, (235, 88, 140), "diamond"), (84, (196, 76, 210), "hex"), (92, (120, 208, 236), "star"), (102, (248, 120, 88), "diamond")],
+            "Null Seraph": [(74, (144, 224, 250), "circle"), (86, (110, 176, 255), "star"), (94, (160, 122, 255), "hex"), (106, (255, 138, 184), "star")],
+            "Iron Eclipse": [(80, (210, 108, 112), "hex"), (88, (232, 168, 110), "diamond"), (96, (252, 205, 118), "circle"), (110, (255, 136, 96), "hex")],
+            "Velvet Singularity": [(78, (168, 118, 244), "circle"), (88, (190, 108, 235), "diamond"), (98, (228, 132, 220), "star"), (108, (122, 214, 236), "circle")],
         }
-        size, col = phase_style[self.phase]
+        size, col, shape = variant_style[self.variant][self.phase - 1]
         self.image = pygame.Surface((size, size), pygame.SRCALPHA)
-        self.image.fill(col)
+        self._draw_form(size, col, shape)
+
+    def _draw_form(self, size: int, col: tuple[int, int, int], shape: str):
+        c = size // 2
+        if shape == "circle":
+            pygame.draw.circle(self.image, col, (c, c), max(10, c - 4))
+        elif shape == "hex":
+            pygame.draw.polygon(self.image, col, [(c, 4), (size - 8, c // 2), (size - 8, size - c // 2), (c, size - 4), (8, size - c // 2), (8, c // 2)])
+        elif shape == "star":
+            pts = [(c, 3), (c + 12, c - 8), (size - 4, c), (c + 12, c + 8), (c, size - 3), (c - 12, c + 8), (4, c), (c - 12, c - 8)]
+            pygame.draw.polygon(self.image, col, pts)
+        else:
+            pygame.draw.polygon(self.image, col, [(c, 2), (size - 3, c), (c, size - 2), (3, c)])
 
     def _set_phase(self, new_phase: int):
         if new_phase != self.phase:

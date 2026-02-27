@@ -11,7 +11,7 @@ class Enemy(pygame.sprite.Sprite):
     def __init__(self, pos: Vector2, hp: float, speed: float, damage: float, kind: str = "chaser"):
         super().__init__()
         self.kind = kind
-        self.image = pygame.Surface((24, 24), pygame.SRCALPHA)
+        self.image = pygame.Surface((28, 28), pygame.SRCALPHA)
         self.rect = self.image.get_rect(center=(int(pos.x), int(pos.y)))
         self.pos = Vector2(pos)
         self.max_hp = hp
@@ -22,16 +22,25 @@ class Enemy(pygame.sprite.Sprite):
         self.style = random.choice(["feral", "cautious", "erratic"])
 
         if self.kind == "rusher":
-            self.image.fill((240, 120, 90))
+            self._draw_shape((240, 120, 90), "triangle")
             self.speed *= 1.35
             self.hp *= 0.8
         elif self.kind == "tank":
-            self.image.fill((170, 80, 180))
+            self._draw_shape((170, 80, 180), "hex")
             self.speed *= 0.75
             self.hp *= 1.55
             self.damage *= 1.15
         else:
-            self.image.fill((220, 78, 96))
+            self._draw_shape((220, 78, 96), "circle")
+
+    def _draw_shape(self, color: tuple[int, int, int], shape: str):
+        self.image.fill((0, 0, 0, 0))
+        if shape == "triangle":
+            pygame.draw.polygon(self.image, color, [(14, 2), (26, 24), (2, 24)])
+        elif shape == "hex":
+            pygame.draw.polygon(self.image, color, [(14, 1), (24, 7), (24, 21), (14, 27), (4, 21), (4, 7)])
+        else:
+            pygame.draw.circle(self.image, color, (14, 14), 12)
 
     def take_damage(self, dmg: float):
         self.hp -= dmg

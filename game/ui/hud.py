@@ -19,37 +19,37 @@ class HUD:
         secondary_label: str = "Nova",
         secondary_cd: float = 0.0,
     ):
-        # Top modern status bar
-        bar_h = 76
+        # Top compact status bar
+        bar_h = 64
         panel = pygame.Surface((WIDTH, bar_h), pygame.SRCALPHA)
         panel.fill((10, 14, 24, 185))
         screen.blit(panel, (0, 0))
 
-        hp_x, hp_y, hp_w, hp_h = 28, 22, 360, 20
+        hp_x, hp_y, hp_w, hp_h = 22, 16, 300, 16
         pygame.draw.rect(screen, (40, 44, 56), (hp_x, hp_y, hp_w, hp_h), border_radius=6)
         ratio = max(0.0, min(1.0, player.hp / max(1, player.max_hp)))
         col = GREEN if ratio > 0.55 else ORANGE if ratio > 0.25 else RED
         pygame.draw.rect(screen, col, (hp_x, hp_y, int(hp_w * ratio), hp_h), border_radius=6)
         pygame.draw.rect(screen, WHITE, (hp_x, hp_y, hp_w, hp_h), 2, border_radius=6)
 
-        exp_x, exp_y, exp_w, exp_h = 28, 50, 360, 8
+        exp_x, exp_y, exp_w, exp_h = 22, 40, 300, 7
         pygame.draw.rect(screen, (36, 40, 52), (exp_x, exp_y, exp_w, exp_h), border_radius=4)
         exp_ratio = max(0.0, min(1.0, player.exp / max(1, player.exp_next)))
         pygame.draw.rect(screen, BLUE, (exp_x, exp_y, int(exp_w * exp_ratio), exp_h), border_radius=4)
 
-        screen.blit(font.render(f"HP {int(player.hp)}/{int(player.max_hp)}", True, WHITE), (hp_x + hp_w + 16, 18))
-        screen.blit(font.render(f"◈ L{level_idx}", True, WHITE), (560, 18))
-        screen.blit(font.render(f"✹ {enemies_alive}", True, WHITE), (670, 18))
-        screen.blit(font.render(f"Ψ {tension:.1f}", True, WHITE), (760, 18))
-        screen.blit(font.render(f"Δ {difficulty}", True, WHITE), (870, 18))
-        screen.blit(font.render(f"Arq: {profile}", True, BLUE), (950, 18))
+        screen.blit(font.render(f"HP {int(player.hp)}/{int(player.max_hp)}", True, WHITE), (hp_x + hp_w + 12, 10))
+        screen.blit(font.render(f"Lv {level_idx}", True, WHITE), (470, 10))
+        screen.blit(font.render(f"En {enemies_alive}", True, WHITE), (560, 10))
+        screen.blit(font.render(f"Ts {tension:.1f}", True, WHITE), (640, 10))
+        screen.blit(font.render(f"Df {difficulty}", True, WHITE), (730, 10))
+        screen.blit(font.render(f"Arq {profile}", True, BLUE), (820, 10))
 
         if powers:
-            powers_txt = " · ".join(powers[:3])
-            screen.blit(font.render(f"Poderes {powers_txt}", True, WHITE), (560, 46))
+            powers_txt = " · ".join(powers[:2])
+            screen.blit(font.render(f"Pow {powers_txt}", True, WHITE), (470, 34))
 
         sec_state = "READY" if secondary_cd <= 0 else f"{secondary_cd:.1f}s"
-        screen.blit(font.render(f"2º {secondary_label}: {sec_state}", True, WHITE), (1220, 46))
+        screen.blit(font.render(f"Alt {secondary_label}: {sec_state}", True, WHITE), (930, 34))
 
         # Bottom center event banner for boss/text cues
         if message:

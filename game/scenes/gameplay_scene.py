@@ -23,25 +23,22 @@ class GameplayScene(BaseScene):
         self.last_floating_count = 0
         self.tutorial_t = 0.0
         self.didactic_tips = [
-            "WASD moverte · Shift dash · Click izq disparo · Click der poder",
-            "Lee Fase Geo: cambia cómo rebotan y doblan los proyectiles",
-            "Puertas cambian el destino: combina símbolos para rutas secretas",
-            "En bosses, prioriza posicionamiento sobre DPS bruto",
+            "WASD mover · Shift dash · Click izq arma · Click der limpieza",
+            "Geo Fase cambia rebotes/cortes: mira el panel inferior",
+            "Puertas cercanas alteran bioma y ritmo de combate",
+            "Boss final muta por arquetipo: prioriza espacio y timing",
         ]
 
         archetype = self.ctx["state"].run.active_archetype
         if archetype == "Guerrero":
-            self.gm.player.image.fill((118, 168, 255))
+            self.gm.player.set_style((118, 168, 255), "diamond")
         elif archetype == "Testigo":
-            self.gm.player.image.fill((122, 230, 210))
+            self.gm.player.set_style((122, 230, 210), "circle")
         elif archetype == "Sombra":
-            self.gm.player.image.fill((178, 128, 245))
+            self.gm.player.set_style((178, 128, 245), "hex")
 
     def _handle_level_up_input(self, key):
-        options = list(self.gm.card_options)
-        if self.gm.power_options:
-            power = self.gm.power_options[0]
-            options.append((f"Power: {power.name} [{power.rarity}]", lambda: self.gm.owned_powers.add(power.name)))
+        options = self.gm._build_levelup_options()
 
         if key in (pygame.K_1, pygame.K_KP1) and len(options) >= 1:
             options[0][1]()
@@ -80,8 +77,9 @@ class GameplayScene(BaseScene):
                     self.ctx["camera"].nudge_to_shot(Vector2(pygame.mouse.get_pos()) - self.gm.player.pos)
         elif e.type == pygame.MOUSEBUTTONDOWN and e.button == 3:
             if self.gm.sm.current in (GameState.RUNNING, GameState.BOSS):
-                if not self.gm.power_system.activate_random_owned(self.gm):
-                    self.gm.player.cast_secondary(self.gm.player_bullets, self.gm.all_sprites)
+                # Secundario claro: primero limpieza de mapa; poder activo solo como fallback.
+                if not self.gm.player.cast_secondary(self.gm.player_bullets, self.gm.all_sprites):
+                    self.gm.power_system.activate_primary_owned(self.gm)
                 self.gm.world_memory.register_action("secondary")
 
     def update(self, dt: float):
@@ -174,7 +172,7 @@ class GameplayScene(BaseScene):
 
         geo = self.gm.geometry
         geo_text = (
-            f"Fase Geo {geo.phase} | Reflectores {len(geo.active_reflectors)} | "
+            f"{geo.biome_name} · Fase {geo.phase} | Reflectores {len(geo.active_reflectors)} | "
             f"Gravedad {'ON' if geo.active_gravity else 'OFF'} | Cortes {len(geo.active_cutlines)}"
         )
         geo_label = self.ctx["small"].render(geo_text, True, (205, 216, 240))
@@ -185,15 +183,15 @@ class GameplayScene(BaseScene):
 
         tip_idx = int(self.tutorial_t // 6) % len(self.didactic_tips)
         tip_text = self.didactic_tips[tip_idx]
-        tip = self.ctx["small"].render(f"✧ Guía: {tip_text}", True, (220, 226, 248))
-        tip_rect = pygame.Rect(22, HEIGHT - 72, tip.get_width() + 20, tip.get_height() + 10)
+        tip = self.ctx["small"].render(f"✧ {tip_text}", True, (220, 226, 248))
+        tip_rect = pygame.Rect(WIDTH - tip.get_width() - 44, HEIGHT - 76, tip.get_width() + 20, tip.get_height() + 10)
         pygame.draw.rect(screen, (10, 12, 18), tip_rect, border_radius=7)
         pygame.draw.rect(screen, (96, 118, 190), tip_rect, 1, border_radius=7)
         screen.blit(tip, (tip_rect.x + 10, tip_rect.y + 5))
 
         meta = self.ctx["small"].render(
-            f"◬ {str(self.ctx['state'].run.seed)[-5:]} · {self.ctx['state'].run.active_archetype} · λ {self.ctx['progression'].lucidez:.2f}",
+            f"◬{str(self.ctx['state'].run.seed)[-4:]} · {self.ctx['state'].run.active_archetype[:3].upper()} · λ{self.ctx['progression'].lucidez:.2f}",
             True,
             WHITE,
         )
-        screen.blit(meta, (WIDTH - meta.get_width() - 24, 20))
+        screen.blit(meta, (WIDTH - meta.get_width() - 24, 12))

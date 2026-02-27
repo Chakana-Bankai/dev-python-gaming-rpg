@@ -72,8 +72,10 @@ class Bullet(pygame.sprite.Sprite):
 class Player(pygame.sprite.Sprite):
     def __init__(self, pos: Vector2):
         super().__init__()
-        self.image = pygame.Surface((28, 28), pygame.SRCALPHA)
-        self.image.fill(BLUE)
+        self.shape = "diamond"
+        self.color = BLUE
+        self.image = pygame.Surface((30, 30), pygame.SRCALPHA)
+        self._redraw()
         self.rect = self.image.get_rect(center=(int(pos.x), int(pos.y)))
         self.pos = Vector2(pos)
         self.vel = Vector2()
@@ -98,7 +100,7 @@ class Player(pygame.sprite.Sprite):
         self.shots_fired = 0
         self._shot_phase = 0
 
-        self.secondary_cd = 2.0
+        self.secondary_cd = 8.0
         self.secondary_timer = 0.0
 
         self.dash_speed = 620
@@ -108,6 +110,21 @@ class Player(pygame.sprite.Sprite):
         self.dash_cd_timer = 0.0
         self.last_move_dir = Vector2(1, 0)
         self.prev_pos = Vector2(self.pos)
+
+    def _redraw(self):
+        self.image.fill((0, 0, 0, 0))
+        if self.shape == "circle":
+            pygame.draw.circle(self.image, self.color, (15, 15), 13)
+        elif self.shape == "hex":
+            pygame.draw.polygon(self.image, self.color, [(15, 1), (26, 7), (26, 22), (15, 29), (4, 22), (4, 7)])
+        else:
+            pygame.draw.polygon(self.image, self.color, [(15, 1), (29, 15), (15, 29), (1, 15)])
+
+    def set_style(self, color: tuple[int, int, int], shape: str | None = None):
+        self.color = color
+        if shape:
+            self.shape = shape
+        self._redraw()
 
     def move_input(self, keys, invert=False):
         x = (1 if keys[pygame.K_d] else 0) - (1 if keys[pygame.K_a] else 0)
@@ -217,19 +234,20 @@ class Player(pygame.sprite.Sprite):
     def cast_secondary(self, bullet_group, all_sprites):
         if self.secondary_timer > 0:
             return False
-        count = 12 if "nova_plus" in self.weapon_modes else 9
+        # Borrado de mapa: ráfaga radial contundente pero con cooldown largo.
+        count = 28 if "nova_plus" in self.weapon_modes else 22
         for i in range(count):
             direction = Vector2(1, 0).rotate(i * (360 / count))
             b = Bullet(
                 self.pos + direction * 16,
                 direction,
-                self.damage * (0.82 if "nova_plus" in self.weapon_modes else 0.72),
+                self.damage * (1.4 if "nova_plus" in self.weapon_modes else 1.2),
                 "player",
-                life=1.05,
-                pierce=max(0, self.pierce - 1),
-                bounces=self.bounce,
-                color=(130, 220, 255),
-                shape="orb",
+                life=1.45,
+                pierce=max(1, self.pierce + 1),
+                bounces=max(1, self.bounce),
+                color=(120, 235, 255),
+                shape="diamond",
             )
             bullet_group.add(b)
             all_sprites.add(b)

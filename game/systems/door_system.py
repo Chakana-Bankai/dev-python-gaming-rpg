@@ -33,11 +33,15 @@ class DoorSystem:
     def create_doors(self):
         pool = list(DoorType)
         random.shuffle(pool)
-        w, h = 110, 24
+        # Puertas dentro de la arena jugable: visibles y alcanzables sin tocar bordes del mapa.
+        w, h = 120, 26
+        top_y = 90
+        center_y = HEIGHT // 2
+        side_x = 126
         rects = [
-            pygame.Rect(WIDTH // 2 - w // 2, 0, w, h),
-            pygame.Rect(0, HEIGHT // 2 - w // 2, h, w),
-            pygame.Rect(WIDTH - h, HEIGHT // 2 - w // 2, h, w),
+            pygame.Rect(WIDTH // 2 - w // 2, top_y, w, h),
+            pygame.Rect(side_x, center_y - w // 2, h, w),
+            pygame.Rect(WIDTH - side_x - h, center_y - w // 2, h, w),
         ]
         return [Door(rects[i], pool[i]) for i in range(3)]
 

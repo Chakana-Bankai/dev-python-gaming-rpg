@@ -9,6 +9,7 @@ from game.core.state_machine import GameState, StateMachine
 from game.core.tension_system import TensionSystem
 from game.entities.boss import Boss, OmegaBoss
 from game.entities.enemy import Enemy
+from game.entities.pickup import RelicPickup
 from game.entities.player import Player
 from game.entities.reflection import Reflection
 from game.systems.audio_system import AudioSystem
@@ -58,6 +59,7 @@ class GameManager:
         self.all_sprites = pygame.sprite.Group()
         self.enemies = pygame.sprite.Group()
         self.player_bullets = pygame.sprite.Group()
+        self.pickups = pygame.sprite.Group()
 
         self.player = Player(Vector2(WIDTH // 2, HEIGHT // 2))
         self.all_sprites.add(self.player)
@@ -129,8 +131,16 @@ class GameManager:
         self.card_options = stat_pool[:2]
         self.power_options = self.power_system.roll_power_cards(self.owned_powers, n=1)
 
+    def _build_levelup_options(self):
+        options = list(self.card_options)
+        if self.power_options:
+            power = self.power_options[0]
+            label = f"Power: {power.name} [{power.rarity}] - {self.power_system.describe(power.name)}"
+            options.append((label, lambda: self.owned_powers.add(power.name)))
+        return options
+
     def _spawn_level(self):
-        for g in (self.enemies, self.player_bullets):
+        for g in (self.enemies, self.player_bullets, self.pickups):
             for s in list(g):
                 s.kill()
         self.doors.clear()
@@ -140,13 +150,14 @@ class GameManager:
         self.consecutive_hits = 0
         self.focus_accumulator = Vector2(self.player.pos)
         self.focus_samples = 1
+        self.geometry.randomize_biome(self.level, self.difficulty, self.door_history[-1] if self.door_history else None)
 
         if self.level in (3, 6, 8):
             self.sm.set(GameState.BOSS)
             self.audio.play_sfx("boss_spawn")
             if self.level == 8:
                 boss = OmegaBoss(Vector2(WIDTH // 2, 120), self.difficulty)
-                self.message = "☠☠☠ OMEGA FINAL: el abismo te mira de vuelta."
+                self.message = f"☠ OMEGA FINAL [{boss.variant}]: el abismo te mira de vuelta."
             elif self.spawn_reflection_next:
                 style = self.mirror_mode.infer_style(self.world_memory.data.get("action_buffer", []))
                 boss = Reflection(Vector2(WIDTH // 2, 140), style)
@@ -161,7 +172,7 @@ class GameManager:
             return
 
         self.sm.set(GameState.RUNNING)
-        count = min(24, 6 + self.difficulty + random.randint(1, 5))
+        count = min(34, 8 + self.difficulty + random.randint(2, 8))
         for _ in range(count):
             p = Vector2(random.randint(40, WIDTH - 40), random.randint(40, HEIGHT - 40))
             kind_roll = random.random()
@@ -169,6 +180,10 @@ class GameManager:
             e = Enemy(p, 20 + self.difficulty * 2.8, 92 + self.difficulty * 4, 9 + self.difficulty, kind=kind)
             self.enemies.add(e)
             self.all_sprites.add(e)
+        if random.random() < 0.42:
+            relic = RelicPickup(Vector2(random.randint(220, WIDTH - 220), random.randint(180, HEIGHT - 220)))
+            self.pickups.add(relic)
+            self.all_sprites.add(relic)
         self.audio.play_music("gameplay")
 
     def _advance(self):
@@ -293,6 +308,11 @@ class GameManager:
                 else:
                     b.kill()
 
+        for relic in pygame.sprite.spritecollide(self.player, self.pickups, dokill=True):
+            bonus = relic.apply(self)
+            self.message = f"◆ Reliquia {relic.name}: {bonus}"
+            self.floating_texts.append(FloatingText(f"{relic.name}", Vector2(self.player.rect.center), (140, 240, 220)))
+
         for e in pygame.sprite.spritecollide(self.player, self.enemies, False):
             if self.player.hp > 0:
                 delta = e.damage * dt * 4.0 * contact_scale
@@ -348,10 +368,7 @@ class GameManager:
         title = self.font.render("LEVEL UP - Choose (1/2/3)", True, WHITE)
         self.screen.blit(title, title.get_rect(center=(WIDTH // 2, 140)))
 
-        options = list(self.card_options)
-        if self.power_options:
-            power = self.power_options[0]
-            options.append((f"Power: {power.name} [{power.rarity}]", lambda: self.owned_powers.add(power.name)))
+        options = self._build_levelup_options()
 
         for i, (label, _) in enumerate(options[:3], start=1):
             r = pygame.Rect(WIDTH // 2 - 220, 180 + (i - 1) * 72, 440, 52)
@@ -413,10 +430,7 @@ class GameManager:
                     if self.sm.is_state(GameState.FINAL) and e.key == pygame.K_r:
                         self._reset_to_menu()
                     if self.sm.is_state(GameState.LEVEL_UP):
-                        options = list(self.card_options)
-                        if self.power_options:
-                            power = self.power_options[0]
-                            options.append((f"Power: {power.name} [{power.rarity}]", lambda: self.owned_powers.add(power.name)))
+                        options = self._build_levelup_options()
                         if e.key in (pygame.K_1, pygame.K_KP1) and len(options) >= 1:
                             options[0][1]()
                             self.player.hp = min(self.player.max_hp, self.player.hp + 8)
@@ -441,9 +455,8 @@ class GameManager:
                                 self.player.shoot(pygame.mouse.get_pos(), self.player_bullets, self.all_sprites)
                 elif e.type == pygame.MOUSEBUTTONDOWN and e.button == 3:
                     if self.sm.current in (GameState.RUNNING, GameState.BOSS):
-                        activated = self.power_system.activate_random_owned(self)
-                        if not activated:
-                            self.player.cast_secondary(self.player_bullets, self.all_sprites)
+                        if not self.player.cast_secondary(self.player_bullets, self.all_sprites):
+                            self.power_system.activate_primary_owned(self)
                         self.world_memory.register_action("secondary")
                         self.audio.play_sfx("dash")
 
