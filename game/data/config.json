@@ -1,0 +1,7 @@
+{
+  "target_fps": 60,
+  "narrative_fade_seconds": 0.8,
+  "transition_seconds": 0.7,
+  "adaptive_difficulty": true,
+  "camera_zoom_boss": 1.04
+}
