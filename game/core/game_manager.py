@@ -13,6 +13,7 @@ from game.entities.player import Player
 from game.entities.reflection import Reflection
 from game.systems.audio_system import AudioSystem
 from game.systems.door_system import DoorSystem
+from game.systems.geometry_system import GeometrySystem
 from game.systems.mirror_mode import MirrorMode
 from game.systems.power_system import PowerSystem
 from game.systems.psychological_profile import PsychologicalProfile
@@ -49,6 +50,7 @@ class GameManager:
         self.mirror_mode = MirrorMode()
         self.audio = audio or AudioSystem()
         self.power_system = PowerSystem()
+        self.geometry = GeometrySystem()
 
         self.hud = HUD()
         self.menus = Menus()
@@ -67,6 +69,9 @@ class GameManager:
         self.final_text = ""
         self.spawn_reflection_next = False
         self.damage_taken = 0.0
+        self.consecutive_hits = 0
+        self.focus_accumulator = Vector2(self.player.pos)
+        self.focus_samples = 1
 
         self.card_options = []
         self.power_options = []
@@ -120,6 +125,9 @@ class GameManager:
         self.door_lock_timer = 0.65
         self.player.pos = Vector2(WIDTH // 2, HEIGHT // 2)
         self.player.rect.center = (int(self.player.pos.x), int(self.player.pos.y))
+        self.consecutive_hits = 0
+        self.focus_accumulator = Vector2(self.player.pos)
+        self.focus_samples = 1
 
         if self.level in (3, 6, 8):
             self.sm.set(GameState.BOSS)
@@ -205,22 +213,47 @@ class GameManager:
         self.player.move_input(keys, invert=invert)
         self.player.update(dt)
 
-        # omega arena shrink
+        boss_ref = None
+        for e in list(self.enemies):
+            if isinstance(e, (Boss, OmegaBoss)):
+                boss_ref = e
+
+        if boss_ref:
+            hp_ratio = boss_ref.hp / boss_ref.max_hp if boss_ref.max_hp else 0
+            if self.geometry.request_phase_from_boss(hp_ratio):
+                self.audio.play_sfx("geom_phase_shift")
+
         for e in list(self.enemies):
             if isinstance(e, OmegaBoss):
                 prev_phase = e.phase
-                e.update(dt, self.player.pos, self.player, self.world_memory.data.get("action_buffer", []))
+                e.update(dt, self.player.pos, self.player, self.world_memory.data.get("action_buffer", []), self.geometry.get_context_for_boss())
                 if e.phase != prev_phase:
                     self.tension.tension_level = min(10.0, self.tension.tension_level + 1.0)
-                    self.audio.play_sfx("boss_spawn")
+                    self.audio.play_sfx("geom_phase_shift")
                 if e.phase == 3:
                     for f in e.split_fragments():
                         self.enemies.add(f)
                         self.all_sprites.add(f)
+            elif isinstance(e, Boss):
+                e.update(dt, self.player.pos, self.geometry.get_context_for_boss())
             else:
                 e.update(dt, self.player.pos)
 
         self.player_bullets.update(dt)
+        self.focus_accumulator += self.player.pos
+        self.focus_samples += 1
+
+        self.geometry.update(
+            dt,
+            self.player,
+            boss_ref,
+            self.player_bullets,
+            self.world_memory.data,
+            self.consecutive_hits,
+            self.focus_accumulator / max(1, self.focus_samples),
+            self._apply_cutline_damage,
+            self.audio,
+        )
 
         # silence field: enemies can't hit while active by contact reduction
         contact_scale = 0.0 if self.silence_field_timer > 0 else 1.0
@@ -252,9 +285,13 @@ class GameManager:
                 self.profile.register_hit_taken()
                 self.audio.play_sfx("damage")
                 self.floating_texts.append(FloatingText(f"-{int(delta)}", Vector2(self.player.rect.center), RED))
+                self.consecutive_hits += 1
             if self.player.hp <= 0:
                 self.world_memory.complete_run(self.level, "Overlord")
                 self.sm.set(GameState.GAME_OVER)
+
+        if not pygame.sprite.spritecollide(self.player, self.enemies, False):
+            self.consecutive_hits = 0
 
         if len(self.enemies) == 0 and not self.doors:
             self.doors = self.door_system.create_doors()
@@ -268,6 +305,8 @@ class GameManager:
                     break
 
         self.tension.update(self.player.shots_fired, self.damage_taken, len(self.enemies), dt)
+        boss_ratio = boss_ref.hp / boss_ref.max_hp if boss_ref else None
+        self.audio.update_dynamic(self.tension.tension_level, boss_ratio)
 
         for ft in list(self.floating_texts):
             ft.update(dt)
@@ -308,6 +347,13 @@ class GameManager:
             col = (170, 120 + int(80 * pulse), 220)
             txt = self.symbol_font.render(s, True, col)
             self.screen.blit(txt, (x, y))
+
+    def _apply_cutline_damage(self, amount: float):
+        self.player.hp -= amount
+        self.damage_taken += amount
+        self.profile.register_hit_taken()
+        self.audio.play_sfx("damage")
+        self.floating_texts.append(FloatingText(f"-{int(amount)}", Vector2(self.player.rect.center), RED))
 
     def run(self):
         running = True
@@ -396,6 +442,7 @@ class GameManager:
                 self.screen.blit(tint, (0, 0))
                 self.menus.draw_menu(self.screen, self.font, self.small)
             else:
+                self.geometry.draw(self.screen)
                 self.all_sprites.draw(self.screen)
                 for d in self.doors:
                     pygame.draw.rect(self.screen, d.color, d.rect)

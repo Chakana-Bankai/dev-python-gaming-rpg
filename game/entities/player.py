@@ -28,13 +28,17 @@ class Bullet(pygame.sprite.Sprite):
         self.life = life
         self.pierce = pierce
         self.bounces = bounces
+        self.speed = 560
+        self.prev_pos = Vector2(self.pos)
 
     def update(self, dt: float):
         self.life -= dt
         if self.life <= 0:
             self.kill()
             return
-        self.pos += self.dir * 560 * dt
+        self.prev_pos = Vector2(self.pos)
+        self.speed = max(260, min(680, self.speed + (560 - self.speed) * dt * 2.0))
+        self.pos += self.dir * self.speed * dt
 
         if self.pos.x <= 0 or self.pos.x >= WIDTH:
             if self.bounces > 0:
@@ -94,6 +98,7 @@ class Player(pygame.sprite.Sprite):
         self.dash_timer = 0.0
         self.dash_cd_timer = 0.0
         self.last_move_dir = Vector2(1, 0)
+        self.prev_pos = Vector2(self.pos)
 
     def move_input(self, keys, invert=False):
         x = (1 if keys[pygame.K_d] else 0) - (1 if keys[pygame.K_a] else 0)
@@ -208,6 +213,7 @@ class Player(pygame.sprite.Sprite):
             self.dash_timer -= dt
             v = self.last_move_dir * self.dash_speed
 
+        self.prev_pos = Vector2(self.pos)
         self.pos += v * dt
         self.pos.x = max(14, min(WIDTH - 14, self.pos.x))
         self.pos.y = max(14, min(HEIGHT - 14, self.pos.y))

@@ -1,6 +1,4 @@
-"""Procedural 8-bit audio system (no assets).
-Genera ondas cuadradas y ruido con pygame.mixer + numpy.
-"""
+"""Dynamic layered tactical audio system (procedural, no assets)."""
 
 from __future__ import annotations
 
@@ -13,116 +11,147 @@ class AudioSystem:
         self.enabled = False
         self.sample_rate = 22050
         self.music_channel = None
+        self.tension_channel = None
+        self.overlay_channel = None
         self.sfx_channel = None
         self._cache = {}
+        self._tension_active = False
         try:
             if not pygame.mixer.get_init():
                 pygame.mixer.init(frequency=self.sample_rate, size=-16, channels=1, buffer=512)
             self.music_channel = pygame.mixer.Channel(0)
-            self.sfx_channel = pygame.mixer.Channel(1)
+            self.tension_channel = pygame.mixer.Channel(1)
+            self.overlay_channel = pygame.mixer.Channel(2)
+            self.sfx_channel = pygame.mixer.Channel(3)
             self.enabled = True
             self._build_bank()
         except pygame.error:
             self.enabled = False
 
-    def _square(self, freq: float, dur: float, volume: float = 0.3):
-        key = ("sq", round(freq, 2), round(dur, 3), round(volume, 2))
+    def _tone(self, freq: float, dur: float, volume: float = 0.3, drift: float = 0.0):
+        key = ("tone", round(freq, 2), round(dur, 3), round(volume, 2), round(drift, 3))
         if key in self._cache:
             return self._cache[key]
         t = np.linspace(0, dur, int(self.sample_rate * dur), endpoint=False)
-        wave = np.sign(np.sin(2 * np.pi * freq * t))
+        f = freq + np.sin(t * 2.5) * drift
+        wave = np.sin(2 * np.pi * f * t)
         env = np.linspace(1.0, 0.0, wave.size)
         audio = (wave * env * volume * 32767).astype(np.int16)
         snd = pygame.mixer.Sound(buffer=audio)
         self._cache[key] = snd
         return snd
 
-    def _noise(self, dur: float, volume: float = 0.2):
-        key = ("nz", round(dur, 3), round(volume, 2))
+    def _metal(self, freq: float, dur: float, volume: float = 0.3):
+        key = ("metal", round(freq), round(dur, 3), round(volume, 2))
         if key in self._cache:
             return self._cache[key]
-        n = int(self.sample_rate * dur)
-        wave = np.random.uniform(-1.0, 1.0, n)
-        env = np.linspace(1.0, 0.0, n)
-        audio = (wave * env * volume * 32767).astype(np.int16)
+        t = np.linspace(0, dur, int(self.sample_rate * dur), endpoint=False)
+        base = np.sin(2 * np.pi * freq * t)
+        overt = np.sin(2 * np.pi * freq * 2.4 * t) * 0.45
+        click = np.sign(np.sin(2 * np.pi * freq * 3.8 * t)) * 0.2
+        env = np.exp(-t * 18)
+        audio = ((base + overt + click) * env * volume * 32767).astype(np.int16)
         snd = pygame.mixer.Sound(buffer=audio)
         self._cache[key] = snd
         return snd
 
     def _build_bank(self):
-        # SFX bank
         self.sfx = {
-            "shoot": self._square(760, 0.05, 0.22),
-            "dash": self._square(300, 0.08, 0.25),
-            "damage": self._square(170, 0.11, 0.32),
-            "boss_spawn": self._square(95, 0.30, 0.36),
+            "shoot": self._tone(700, 0.045, 0.18),
+            "dash": self._tone(290, 0.07, 0.23),
+            "damage": self._tone(165, 0.10, 0.28),
+            "boss_spawn": self._tone(95, 0.30, 0.30, drift=8),
+            "geom_phase_shift": self._tone(82, 0.24, 0.35, drift=12),
+            "reflect_player": self._metal(980, 0.07, 0.2),
+            "reflect_boss": self._metal(760, 0.09, 0.24),
+            "gravity_enter": self._tone(130, 0.09, 0.16, drift=4),
         }
-        # Final sounds
+
         self.final_sounds = {
-            "RUPTURA": self._square(420, 0.24, 0.3),
-            "DISOLUCION": self._square(260, 0.30, 0.28),
-            "INTEGRACION": self._square(520, 0.28, 0.28),
+            "RUPTURA": self._tone(390, 0.24, 0.28, drift=8),
+            "DISOLUCION": self._tone(250, 0.30, 0.26, drift=12),
+            "INTEGRACION": self._tone(520, 0.28, 0.24, drift=5),
         }
 
-        # Procedural loops
-        self.menu_loop = self._build_menu_loop()
-        self.gameplay_loop = self._build_gameplay_loop()
+        self.menu_loop = self._build_ambient_loop(tempo=0.0)
+        self.ambient_loop = self._build_ambient_loop(tempo=1.0)
+        self.tension_loop = self._build_tension_loop()
+        self.final_overlay = self._build_final_overlay()
 
-    def _build_menu_loop(self):
-        # 220Hz pulse each 1.2s
-        total = int(self.sample_rate * 4.8)
-        audio = np.zeros(total, dtype=np.float32)
-        pulse = np.sign(np.sin(2 * np.pi * 220 * np.linspace(0, 0.12, int(self.sample_rate * 0.12), endpoint=False)))
-        pulse *= np.linspace(1.0, 0.0, pulse.size)
-        for s in [0.0, 1.2, 2.4, 3.6]:
-            i = int(s * self.sample_rate)
-            j = min(total, i + pulse.size)
-            audio[i:j] += pulse[: j - i] * 0.18
-        pcm = np.clip(audio * 32767, -32767, 32767).astype(np.int16)
-        return pygame.mixer.Sound(buffer=pcm)
+    def _build_ambient_loop(self, tempo=1.0):
+        total = int(self.sample_rate * 6.0)
+        t = np.linspace(0, 6.0, total, endpoint=False)
+        pad = np.sin(2 * np.pi * 84 * t) * 0.18 + np.sin(2 * np.pi * 127 * t) * 0.08
+        texture = np.sin(2 * np.pi * (42 + np.sin(t * 0.35) * 3) * t) * 0.12
+        pulse = np.zeros_like(t)
+        if tempo > 0:
+            for sec in [1.0, 2.6, 4.2, 5.6]:
+                idx = int(sec * self.sample_rate)
+                ln = int(0.15 * self.sample_rate)
+                pulse[idx : idx + ln] += np.hanning(ln) * 0.08
+        audio = np.clip((pad + texture + pulse) * 0.55, -1, 1)
+        return pygame.mixer.Sound(buffer=(audio * 32767).astype(np.int16))
 
-    def _build_gameplay_loop(self):
-        # 140 BPM tick + noise accent each 4 beats
-        bpm = 140
-        beat = 60.0 / bpm
-        total = int(self.sample_rate * (beat * 16))
-        audio = np.zeros(total, dtype=np.float32)
-        tick = np.sign(np.sin(2 * np.pi * 330 * np.linspace(0, 0.04, int(self.sample_rate * 0.04), endpoint=False)))
-        tick *= np.linspace(1.0, 0.0, tick.size)
-        accent = np.random.uniform(-1.0, 1.0, int(self.sample_rate * 0.07)) * np.linspace(1.0, 0.0, int(self.sample_rate * 0.07))
-        for b in range(16):
-            i = int((b * beat) * self.sample_rate)
-            j = min(total, i + tick.size)
-            audio[i:j] += tick[: j - i] * 0.12
-            if b % 4 == 0:
-                j2 = min(total, i + accent.size)
-                audio[i:j2] += accent[: j2 - i] * 0.07
-        pcm = np.clip(audio * 32767, -32767, 32767).astype(np.int16)
-        return pygame.mixer.Sound(buffer=pcm)
+    def _build_tension_loop(self):
+        total = int(self.sample_rate * 4.0)
+        t = np.linspace(0, 4.0, total, endpoint=False)
+        drone = np.sin(2 * np.pi * 70 * t) * 0.16 + np.sin(2 * np.pi * 92 * t) * 0.14
+        pulses = np.zeros_like(t)
+        for sec in [0.0, 1.0, 2.0, 3.0]:
+            idx = int(sec * self.sample_rate)
+            ln = int(0.2 * self.sample_rate)
+            pulses[idx : idx + ln] += np.hanning(ln) * 0.18
+        audio = np.clip((drone + pulses) * 0.6, -1, 1)
+        return pygame.mixer.Sound(buffer=(audio * 32767).astype(np.int16))
+
+    def _build_final_overlay(self):
+        total = int(self.sample_rate * 3.5)
+        t = np.linspace(0, 3.5, total, endpoint=False)
+        tone = np.sin(2 * np.pi * (150 + np.sin(t * 2.2) * 9) * t) * 0.2
+        low = np.sin(2 * np.pi * 55 * t) * 0.1
+        audio = np.clip((tone + low) * np.linspace(0.2, 0.9, total), -1, 1)
+        return pygame.mixer.Sound(buffer=(audio * 32767).astype(np.int16))
 
     def play_sfx(self, name: str):
-        if not self.enabled:
-            return
-        s = self.sfx.get(name)
-        if s:
-            self.sfx_channel.play(s)
+        if self.enabled and name in self.sfx:
+            self.sfx_channel.play(self.sfx[name])
 
     def play_music(self, name: str):
         if not self.enabled:
             return
+        self.stop_music()
         if name == "menu":
             self.music_channel.play(self.menu_loop, loops=-1)
+            self.music_channel.set_volume(0.22)
         elif name == "gameplay":
-            self.music_channel.play(self.gameplay_loop, loops=-1)
+            self.music_channel.play(self.ambient_loop, loops=-1)
+            self.music_channel.set_volume(0.2)
+            self.tension_channel.play(self.tension_loop, loops=-1)
+            self.tension_channel.set_volume(0.0)
+
+    def update_dynamic(self, tension_level: float, boss_hp_ratio: float | None = None):
+        if not self.enabled or not self.tension_channel:
+            return
+        target = 0.16 if tension_level > 0.6 else 0.0
+        current = self.tension_channel.get_volume()
+        self.tension_channel.set_volume(current + (target - current) * 0.05)
+
+        if boss_hp_ratio is not None and boss_hp_ratio <= 0.1:
+            self.music_channel.set_volume(0.12)
+            self.overlay_channel.play(self.final_overlay, loops=-1)
+            self.overlay_channel.set_volume(0.14)
+        else:
+            self.overlay_channel.stop()
 
     def stop_music(self):
         if self.enabled:
             self.music_channel.stop()
+            self.tension_channel.stop()
+            self.overlay_channel.stop()
 
     def play_final(self, archetype: str):
         if not self.enabled:
             return
-        # map archetype -> requested final sonics
         key = {
             "Duelist": "RUPTURA",
             "Colossus": "DISOLUCION",
