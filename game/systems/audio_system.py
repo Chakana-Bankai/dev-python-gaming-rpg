@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import random
+
 import numpy as np
 import pygame
 
@@ -65,6 +67,7 @@ class AudioSystem:
             "reflect_player": self._metal(980, 0.07, 0.2),
             "reflect_boss": self._metal(760, 0.09, 0.24),
             "gravity_enter": self._tone(130, 0.09, 0.16, drift=4),
+            "level_up": self._tone(640, 0.16, 0.26, drift=18),
         }
 
         self.final_sounds = {
@@ -73,16 +76,21 @@ class AudioSystem:
             "INTEGRACION": self._tone(520, 0.28, 0.24, drift=5),
         }
 
-        self.menu_loop = self._build_ambient_loop(tempo=0.0)
-        self.ambient_loop = self._build_ambient_loop(tempo=1.0)
+        self.menu_loop = self._build_ambient_loop(tempo=0.0, color=0)
+        self.ambient_variants = [
+            self._build_ambient_loop(tempo=1.0, color=0),
+            self._build_ambient_loop(tempo=1.0, color=1),
+            self._build_ambient_loop(tempo=1.0, color=2),
+        ]
         self.tension_loop = self._build_tension_loop()
         self.final_overlay = self._build_final_overlay()
 
-    def _build_ambient_loop(self, tempo=1.0):
+    def _build_ambient_loop(self, tempo=1.0, color=0):
         total = int(self.sample_rate * 6.0)
         t = np.linspace(0, 6.0, total, endpoint=False)
-        pad = np.sin(2 * np.pi * 84 * t) * 0.18 + np.sin(2 * np.pi * 127 * t) * 0.08
-        texture = np.sin(2 * np.pi * (42 + np.sin(t * 0.35) * 3) * t) * 0.12
+        roots = [84, 96, 76][color % 3]
+        pad = np.sin(2 * np.pi * roots * t) * 0.18 + np.sin(2 * np.pi * (roots * 1.5) * t) * 0.08
+        texture = np.sin(2 * np.pi * (42 + np.sin(t * (0.35 + color * 0.08)) * (3 + color)) * t) * 0.12
         pulse = np.zeros_like(t)
         if tempo > 0:
             for sec in [1.0, 2.6, 4.2, 5.6]:
@@ -124,7 +132,7 @@ class AudioSystem:
             self.music_channel.play(self.menu_loop, loops=-1)
             self.music_channel.set_volume(0.22)
         elif name == "gameplay":
-            self.music_channel.play(self.ambient_loop, loops=-1)
+            self.music_channel.play(random.choice(self.ambient_variants), loops=-1)
             self.music_channel.set_volume(0.2)
             self.tension_channel.play(self.tension_loop, loops=-1)
             self.tension_channel.set_volume(0.0)

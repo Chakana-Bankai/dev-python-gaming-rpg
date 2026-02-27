@@ -24,6 +24,9 @@ class EndingScene(BaseScene):
     def handle_event(self, event):
         if event.type == pygame.KEYDOWN and event.key == pygame.K_RETURN and self.t > 1.1:
             self.ctx["progression"].on_new_run()
+            seed = self.ctx["procedural"].start_run()
+            self.ctx["state"].reset_run(self.ctx["save"].data.get("archetype_unlocked", "Iniciado"), seed)
+            self.ctx["gm"] = None
             from game.scenes.narrative_scene import NarrativeScene
 
             self._next = NarrativeScene(self.ctx, fragment_index=min(5, self.ctx["save"].data["runs_completed"]))

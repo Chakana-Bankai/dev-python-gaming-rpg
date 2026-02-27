@@ -140,6 +140,10 @@ class Player(pygame.sprite.Sprite):
         if "spiral" in self.weapon_modes:
             self._shot_phase = (self._shot_phase + 18) % 360
             dirs += [base.rotate(self._shot_phase), base.rotate(-self._shot_phase)]
+        if "sigil" in self.weapon_modes:
+            dirs += [base.rotate(a) for a in (45, 135, -45, -135)]
+        if "lattice" in self.weapon_modes:
+            dirs += [base.rotate(a) for a in (-60, -30, 30, 60)]
         # normalizar y deduplicar aproximada
         out = []
         for d in dirs:

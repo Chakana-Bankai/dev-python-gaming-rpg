@@ -102,9 +102,14 @@ class GameManager:
 
     def _roll_cards(self):
         p = self.player
+
+        def _inc_damage(amount: float):
+            self.base_player_damage += amount
+            p.damage = self.base_player_damage
+
         stat_pool = [
             ("+25 HP max", lambda: setattr(p, "max_hp", p.max_hp + 25)),
-            ("+4 Damage", lambda: setattr(p, "damage", p.damage + 4)),
+            ("+4 Damage", lambda: _inc_damage(4)),
             ("Mode: Triple", lambda: p.weapon_modes.add("triple")),
             ("Mode: Fan Shot", lambda: p.weapon_modes.add("fan_shot")),
             ("Mode: Cross Shot", lambda: p.weapon_modes.add("cross_shot")),
@@ -113,6 +118,8 @@ class GameManager:
             ("Mode: Rapid Fire", lambda: p.weapon_modes.add("rapid_fire")),
             ("Mode: Nova+", lambda: p.weapon_modes.add("nova_plus")),
             ("Mode: Storm Crit", lambda: p.weapon_modes.add("storm_crit")),
+            ("Mode: Sigil", lambda: p.weapon_modes.add("sigil")),
+            ("Mode: Lattice", lambda: p.weapon_modes.add("lattice")),
         ]
         random.shuffle(stat_pool)
         self.card_options = stat_pool[:2]
@@ -188,6 +195,7 @@ class GameManager:
         if self.player.gain_exp(xp):
             self._roll_cards()
             self.sm.set(GameState.LEVEL_UP)
+            self.audio.play_sfx("level_up")
 
     def _update_power_timers(self, dt: float):
         self.time_since_last_shot += dt
@@ -201,7 +209,6 @@ class GameManager:
         self.door_lock_timer = max(0.0, self.door_lock_timer - dt)
 
         # reset derived base every frame before passive powers
-        self.base_player_damage = max(self.base_player_damage, self.player.damage)
         self.player.damage = self.base_player_damage
         self.player.speed = self.base_player_speed
         self.player.pierce = self.base_player_pierce

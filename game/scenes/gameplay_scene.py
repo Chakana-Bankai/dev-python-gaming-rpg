@@ -165,7 +165,7 @@ class GameplayScene(BaseScene):
         screen.blit(geo_label, geo_rect)
 
         meta = self.ctx["small"].render(
-            f"Seed: {self.ctx['state'].run.seed}  Arquetipo: {self.ctx['state'].run.active_archetype}  Lucidez: {self.ctx['progression'].lucidez:.2f}",
+            f"◬ {str(self.ctx['state'].run.seed)[-5:]} · {self.ctx['state'].run.active_archetype} · λ {self.ctx['progression'].lucidez:.2f}",
             True,
             WHITE,
         )

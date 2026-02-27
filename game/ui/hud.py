@@ -36,15 +36,15 @@ class HUD:
         pygame.draw.rect(screen, BLUE, (exp_x, exp_y, int(exp_w * exp_ratio), exp_h), border_radius=4)
 
         screen.blit(font.render(f"HP {int(player.hp)}/{int(player.max_hp)}", True, WHITE), (hp_x + hp_w + 16, 18))
-        screen.blit(font.render(f"Lvl {level_idx}/8", True, WHITE), (560, 18))
-        screen.blit(font.render(f"Enemies {enemies_alive}", True, WHITE), (700, 18))
-        screen.blit(font.render(f"Tension {tension:.1f}", True, WHITE), (900, 18))
-        screen.blit(font.render(f"Diff {difficulty}", True, WHITE), (1080, 18))
-        screen.blit(font.render(f"Archetype {profile}", True, BLUE), (1200, 18))
+        screen.blit(font.render(f"◈ L{level_idx}", True, WHITE), (560, 18))
+        screen.blit(font.render(f"✹ {enemies_alive}", True, WHITE), (670, 18))
+        screen.blit(font.render(f"Ψ {tension:.1f}", True, WHITE), (760, 18))
+        screen.blit(font.render(f"Δ {difficulty}", True, WHITE), (870, 18))
+        screen.blit(font.render(f"Arq: {profile}", True, BLUE), (950, 18))
 
         if powers:
-            powers_txt = " · ".join(powers[:4])
-            screen.blit(font.render(f"Powers: {powers_txt}", True, WHITE), (560, 46))
+            powers_txt = " · ".join(powers[:3])
+            screen.blit(font.render(f"Poderes {powers_txt}", True, WHITE), (560, 46))
 
         # Bottom center event banner for boss/text cues
         if message:
